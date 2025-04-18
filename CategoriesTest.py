@@ -1,6 +1,6 @@
 import unittest
 from datetime import date
-from Categories import Groceries, NotGroceries
+from Categories import Groceries
 from ReportParsers import Transaction
 
 class TestCategoryMatching(unittest.TestCase):
@@ -28,11 +28,6 @@ class TestCategoryMatching(unittest.TestCase):
         category = Groceries()
         self.assertTrue(category.is_matched(self.tx_ah))
         self.assertFalse(category.is_matched(self.tx_non_ah))
-
-    def test_not_groceries_excludes_albert_heijn(self):
-        category = NotGroceries()
-        self.assertFalse(category.is_matched(self.tx_ah))
-        self.assertTrue(category.is_matched(self.tx_non_ah))
 
 if __name__ == '__main__':
     unittest.main()

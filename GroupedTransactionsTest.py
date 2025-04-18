@@ -1,7 +1,7 @@
 import unittest
 from datetime import date
 from GroupedTransactions import GroupedTransactions
-from Categories import Category, Groceries, NotGroceries
+from Categories import Category, Groceries
 from ReportParsers import Transaction
 
 class TestTransactionGrouping(unittest.TestCase):
@@ -35,8 +35,15 @@ class TestTransactionGrouping(unittest.TestCase):
         )
 
     def test_grouping_correctly_sorts_transactions(self):
+        class NotGroceries(Category):
+            def __init__(self):
+                super().__init__('NotGroceries')
+            def is_matched(self, tx):
+                return not Groceries().is_matched(tx)
+        
         grouped = GroupedTransactions(Groceries(), NotGroceries())
-        grouped.add_transactions([self.tx_groceries, self.tx_other])
+        ungrouped = grouped.add_transactions([self.tx_groceries, self.tx_other])
+        self.assertEqual(ungrouped, [])
 
         groceries = [cat for cat in grouped.get_categories() if cat.get_name() == 'Groceries'][0]
         not_groceries = [cat for cat in grouped.get_categories() if cat.get_name() == 'NotGroceries'][0]
@@ -61,19 +68,20 @@ class TestTransactionGrouping(unittest.TestCase):
         self.assertIn("CatA", str(ctx.exception))
         self.assertIn("CatB", str(ctx.exception))
 
-    def test_transaction_matching_no_category_raises(self):
+    def test_transaction_matching_no_category_returns_ungrouped(self):
         class NoMatchCategory(Category):
             def __init__(self): super().__init__('NoMatch')
             def is_matched(self, tx): return False
 
         grouped = GroupedTransactions(NoMatchCategory())
-        with self.assertRaises(ValueError) as ctx:
-            grouped.add_transactions([self.tx_other])
-        self.assertIn("did not match any category", str(ctx.exception))
+        ungrouped = grouped.add_transactions([self.tx_other])  
+        self.assertEqual(len(ungrouped), 1)  
+        self.assertEqual(ungrouped[0], self.tx_other)  
 
     def test_positive_and_negative_in_same_category(self):
         grouped = GroupedTransactions(Groceries())
-        grouped.add_transactions([self.tx_groceries, self.tx_refund])
+        ungrouped = grouped.add_transactions([self.tx_groceries, self.tx_refund])  
+        self.assertEqual(ungrouped, [])  
 
         groceries = grouped.get_categories()[0]
         self.assertEqual(len(groceries.get_transactions()), 2)

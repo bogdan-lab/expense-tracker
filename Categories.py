@@ -35,11 +35,81 @@ class Groceries(Category):
         return 'albert heijn' in transaction.description.lower()
 
 
-class NotGroceries(Category):
+class Transport(Category):
     def __init__(self):
-        super().__init__('NotGroceries')
+        super().__init__('Transport')
 
     def is_matched(self, transaction: Transaction) -> bool:
-        return 'albert heijn' not in transaction.description.lower()
+        return False
 
 
+class HouseholdGoods(Category):
+    def __init__(self):
+        super().__init__('Household goods')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        return False
+
+
+class Restaurants(Category):
+    def __init__(self):
+        super().__init__('Restaurants')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        return False
+
+
+class Gina(Category):
+    def __init__(self):
+        super().__init__('Gina')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        return False
+
+
+class Health(Category):
+    def __init__(self):
+        super().__init__('Health')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        return False
+
+
+class Clothes(Category):
+    def __init__(self):
+        super().__init__('Clothes')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        return False
+
+
+class Child(Category):
+    def __init__(self):
+        super().__init__('Child')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        return False
+
+
+class Entertainment(Category):
+    def __init__(self):
+        super().__init__('Entertainment')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        return False
+
+
+class Taxes(Category):
+    def __init__(self):
+        super().__init__('Taxes')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        return False
+
+
+class Others(Category):
+    def __init__(self):
+        super().__init__('Others')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        return False
