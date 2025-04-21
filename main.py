@@ -3,7 +3,7 @@ from ReportParsers import parse_transactions
 from Categories import (
     Groceries, Transport, HouseholdGoods, Restaurants, 
     Gina, Health, Clothes, Child, Entertainment, Taxes, 
-    Others
+    VVE, Bills, Insurance, Banks, InternalTransfers, Others
 )
 from GroupedTransactions import GroupedTransactions
 
@@ -17,7 +17,8 @@ def main():
                                   HouseholdGoods(), Restaurants(), 
                                   Gina(), Health(), Clothes(), 
                                   Child(), Entertainment(), Taxes(),
-                                  Others())
+                                  VVE(), Bills(), Insurance(), Banks(),
+                                  InternalTransfers(), Others())
     ungrouped = grouped.add_transactions(transactions)
 
     print("\n==================== GROUPED TRANSACTIONS ====================\n")
@@ -31,7 +32,7 @@ def main():
     if ungrouped:
         print(f"==================== UNGROUPED TRANSACTIONS ({len(ungrouped)}) ===================\n")
         for tx in ungrouped:
-            print(f"  - {tx.description}")
+            print(f"  - {tx.date}\t{tx.amount}\t{tx.description}")
         print("\n==============================================================\n")
 
 if __name__ == "__main__":
