@@ -2,7 +2,7 @@ import unittest
 from tempfile import NamedTemporaryFile
 from datetime import date
 from typing import List
-from ReportParsers import parse_transactions
+from ReportParsers import parse_abn_amro_transactions
 
 def create_temp_file(lines: List[str]) -> str:
     with NamedTemporaryFile(mode='w+', delete=False) as tmp:
@@ -16,7 +16,7 @@ class TestParseTransactions(unittest.TestCase):
             "SEPA Overboeking IBAN: NL92ADYB2017400998 BIC: ADYBNL2AXXX Naam: Albert Heijn"
         ]
         tmp_path = create_temp_file(lines)
-        result = parse_transactions(tmp_path)
+        result = parse_abn_amro_transactions(tmp_path)
         self.assertEqual(len(result), 1)
         tx = result[0]
         self.assertEqual(tx.account_number, "119747944")
@@ -31,7 +31,7 @@ class TestParseTransactions(unittest.TestCase):
         lines = ["119747944 EUR 20250103 388,30"]
         tmp_path = create_temp_file(lines)
         with self.assertRaises(ValueError) as context:
-            parse_transactions(tmp_path)
+            parse_abn_amro_transactions(tmp_path)
         self.assertIn("Invalid transaction row", str(context.exception))
 
     def test_invalid_date_format_raises_exception(self):
@@ -40,7 +40,7 @@ class TestParseTransactions(unittest.TestCase):
         ]
         tmp_path = create_temp_file(lines)
         with self.assertRaises(ValueError) as context:
-            parse_transactions(tmp_path)
+            parse_abn_amro_transactions(tmp_path)
         self.assertIn("Invalid date format", str(context.exception))
 
 if __name__ == '__main__':

@@ -15,7 +15,7 @@ Transaction = namedtuple('Transaction', [
 def parse_float(value: str) -> float:
     return float(value.replace(',', '.'))
 
-def parse_transactions(file_path: str) -> List[Transaction]:
+def parse_abn_amro_transactions(file_path: str) -> List[Transaction]:
     transactions = []
     with open(file_path, encoding='utf-8') as f:
         for line in f:

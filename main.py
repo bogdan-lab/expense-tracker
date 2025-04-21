@@ -1,5 +1,5 @@
 import argparse
-from ReportParsers import parse_transactions
+from ReportParsers import parse_abn_amro_transactions
 from Categories import (
     Groceries, Transport, HouseholdGoods, Restaurants, 
     Gina, Health, Clothes, Child, Entertainment, Taxes, 
@@ -12,7 +12,7 @@ def main():
     parser.add_argument("file_path", type=str, help="Path to the transaction file")
     args = parser.parse_args()
 
-    transactions = parse_transactions(args.file_path)
+    transactions = parse_abn_amro_transactions(args.file_path)
     grouped = GroupedTransactions(Groceries(), Transport(), 
                                   HouseholdGoods(), Restaurants(), 
                                   Gina(), Health(), Clothes(), 
