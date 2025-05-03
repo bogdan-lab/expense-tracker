@@ -1,18 +1,25 @@
 import argparse
-from ReportParsers import parse_abn_amro_transactions
+from ReportParsers import Transaction
 from Categories import (
     Groceries, Transport, HouseholdGoods, Restaurants, 
     Gina, Health, Clothes, Child, Entertainment, Taxes, 
     VVE, Bills, Insurance, Banks, InternalTransfers, Others
 )
 from GroupedTransactions import GroupedTransactions
+from ReportAggregator import ReportAggregator
 
 def main():
     parser = argparse.ArgumentParser(description="Process bank transaction file and group by category.")
-    parser.add_argument("file_path", type=str, help="Path to the transaction file")
+    parser.add_argument("path", type=str, help="Path to the transaction file(s)")
     args = parser.parse_args()
 
-    transactions = parse_abn_amro_transactions(args.file_path)
+    reports = ReportAggregator(args.path)
+    transactions: list[Transaction] = (
+        reports.get_abn_transactions() +
+        reports.get_ing_transactions() +
+        reports.get_revolut_transactions()
+    )
+
     grouped = GroupedTransactions(Groceries(), Transport(), 
                                   HouseholdGoods(), Restaurants(), 
                                   Gina(), Health(), Clothes(), 
