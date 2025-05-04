@@ -3,7 +3,8 @@ from ReportParsers import Transaction
 from Categories import (
     Groceries, Transport, HouseholdGoods, Restaurants, 
     Gina, Health, Clothes, Child, Entertainment, Taxes, 
-    VVE, Bills, Insurance, Banks, InternalTransfers, Others
+    VVE, Bills, Insurance, Banks, InternalTransfers,
+    Services, Apartment, Income, Others
 )
 from GroupedTransactions import GroupedTransactions
 from ReportAggregator import ReportAggregator
@@ -25,7 +26,8 @@ def main():
                                   Gina(), Health(), Clothes(), 
                                   Child(), Entertainment(), Taxes(),
                                   VVE(), Bills(), Insurance(), Banks(),
-                                  InternalTransfers(), Others())
+                                  InternalTransfers(), Services(), Apartment(), 
+                                  Income(), Others())
     ungrouped = grouped.add_transactions(transactions)
 
     print("\n==================== GROUPED TRANSACTIONS ====================\n")

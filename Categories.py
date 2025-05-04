@@ -60,6 +60,7 @@ class Insurance(Category):
         patterns = [
             re.compile(r"ABN AMRO SCHADEV NV"),
             re.compile(r"Premie Zilveren Kruis Relatienummer 190009575"),
+            re.compile(r"Allianz Nederland Levensve"),
         ]
         return any(p.search(transaction.description) for p in patterns)
 
@@ -175,6 +176,7 @@ class Banks(Category):
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
             re.compile(r"ABN AMRO Bank N.V."),
+            re.compile(r"ING BANK N.V."),
         ]
         return any(p.search(transaction.description) for p in patterns)
 
@@ -190,10 +192,43 @@ class InternalTransfers(Category):
             re.compile(r"/TRTP/iDEAL/IBAN/NL58CITI2032329913/BIC/CITINL2X/NAME/Revolut Bank UAB"),
             re.compile(r"NAME/Interactive Brokers Ireland Limited"),
             re.compile(r"NAME/A LAKATOSH"),
+            re.compile(r"Name: Bohdan Lakatosh"),
+            re.compile(r"IDEAL Top-Up"),
         ]
         return any(p.search(transaction.description) for p in patterns)
 
 
+class Apartment(Category):
+    def __init__(self):
+        super().__init__('Apartment')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        patterns = [
+            re.compile(r"Teilingen Residence B.V."),
+        ]
+        return any(p.search(transaction.description) for p in patterns)
+
+
+class Income(Category):
+    def __init__(self):
+        super().__init__('Income')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        patterns = [
+            re.compile(r"IMC TRADING BV"),
+        ]
+        return any(p.search(transaction.description) for p in patterns)
+
+class Services(Category):
+    def __init__(self):
+        super().__init__('Services')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        patterns = [
+            re.compile(r"Spotify"),
+            re.compile(r"OpenAI"),
+        ]
+        return any(p.search(transaction.description) for p in patterns)
 
 class Others(Category):
     def __init__(self):
@@ -204,7 +239,7 @@ class Others(Category):
             re.compile(r"CCV\*Kroonenberg Groep"),
             re.compile(r"NAME/Greenwheels\b"),
             re.compile(r"\bDen Haag\b.*\bNR:55800440"),
-
+            re.compile(r"infobus.eu"),
         ]
         return any(p.search(transaction.description) for p in patterns)
 
