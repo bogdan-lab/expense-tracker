@@ -44,5 +44,31 @@ def main():
             print(f"  - {tx.date}\t{tx.amount}\t{tx.description}")
         print("\n==============================================================\n")
 
+    total_earn = 0.0
+    total_spent = 0.0
+    earn_categories = []
+    spent_categories = []
+
+    print("\n=== Category Totals ===")
+    print(f"{'Category':<20} {'Amount':>12}")
+    print("-" * 32)
+    for category in grouped.get_categories():
+        if category.get_name() == "InternalTransfers":
+            continue
+        category_total = category.get_total()
+        print(f"{category.get_name():<20} {category_total:12.2f}")
+        if category_total > 0:
+            total_earn += category_total
+            earn_categories.append(category.get_name())
+        else:
+            total_spent += category_total
+            spent_categories.append(category.get_name())
+
+    print("\n=== Summary ===")
+    print(f"Total Earn : {total_earn:.2f} from {', '.join(earn_categories)}")
+    print(f"Total Spent: {abs(total_spent):.2f} from {', '.join(spent_categories)}")
+    
+
+
 if __name__ == "__main__":
     main()
