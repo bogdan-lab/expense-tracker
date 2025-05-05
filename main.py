@@ -8,6 +8,7 @@ from Categories import (
 )
 from GroupedTransactions import GroupedTransactions
 from ReportAggregator import ReportAggregator
+from collections import defaultdict
 
 def main():
     parser = argparse.ArgumentParser(description="Process bank transaction file and group by category.")
@@ -44,31 +45,55 @@ def main():
             print(f"  - {tx.date}\t{tx.amount}\t{tx.description}")
         print("\n==============================================================\n")
 
-    total_earn = 0.0
-    total_spent = 0.0
-    earn_categories = []
-    spent_categories = []
+    # Aggregate by category and month
+    monthly_totals = defaultdict(lambda: defaultdict(float))
 
-    print("\n=== Category Totals ===")
-    print(f"{'Category':<20} {'Amount':>12}")
-    print("-" * 32)
     for category in grouped.get_categories():
         if category.get_name() == "InternalTransfers":
             continue
-        category_total = category.get_total()
-        print(f"{category.get_name():<20} {category_total:12.2f}")
-        if category_total > 0:
-            total_earn += category_total
-            earn_categories.append(category.get_name())
-        else:
-            total_spent += category_total
-            spent_categories.append(category.get_name())
+        for tx in category.get_transactions():
+            month = tx.date.strftime("%Y-%m")
+            monthly_totals[category.get_name()][month] += tx.amount
 
-    print("\n=== Summary ===")
-    print(f"Total Earn : {total_earn:.2f} from {', '.join(earn_categories)}")
-    print(f"Total Spent: {abs(total_spent):.2f} from {', '.join(spent_categories)}")
-    
+    # Identify all months across all categories
+    all_months = sorted({month for m in monthly_totals.values() for month in m})
 
+    # Build and print table header
+    cell_width = 15
+    header = f"| {'Category':<{cell_width}} |" + "".join(
+        f" {month:>{cell_width}} |" for month in all_months)
+    line = "+" + "-"*(cell_width + 2) + "+" + "+".join("-"*(cell_width + 2) for _ in all_months) + "+"
+
+    print("\n=== Monthly Category Totals ===")
+    print(line)
+    print(header)
+    print(line)
+
+    # Print rows per category
+    total_earn = defaultdict(float)
+    total_spent = defaultdict(float)
+
+    for category, months in monthly_totals.items():
+        row = f"| {category:<{cell_width}} |"
+        for month in all_months:
+            amt = months.get(month, 0.0)
+            row += f" {amt:>{cell_width}.2f} |"
+            if amt > 0:
+                total_earn[month] += amt
+            else:
+                total_spent[month] += amt
+        print(row)
+    print(line)
+
+    # Print summary rows
+    row_earn = f"| {'Total Earn':<{cell_width}} |" + "".join(
+        f" {total_earn[m]:>{cell_width}.2f} |" for m in all_months)
+    row_spent = f"| {'Total Spent':<{cell_width}} |" + "".join(
+        f" {abs(total_spent[m]):>{cell_width}.2f} |" for m in all_months)
+
+    print(row_earn)
+    print(row_spent)
+    print(line)
 
 if __name__ == "__main__":
     main()
