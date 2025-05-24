@@ -9,6 +9,16 @@ from Categories import (
 from GroupedTransactions import GroupedTransactions
 from ReportAggregator import ReportAggregator
 from collections import defaultdict
+from ExpenseVisualizer import ExpenseVisualizer
+import logging
+
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+)
+
+
 
 def main():
     parser = argparse.ArgumentParser(description="Process bank transaction file and group by category.")
@@ -22,6 +32,8 @@ def main():
         reports.get_revolut_transactions()
     )
 
+    print(f"Number of transactions: {len(transactions)}")
+
     grouped = GroupedTransactions(Groceries(), Transport(), 
                                   HouseholdGoods(), Restaurants(), 
                                   Gina(), Health(), Clothes(), 
@@ -31,69 +43,16 @@ def main():
                                   Income(), Documents(), Others())
     ungrouped = grouped.add_transactions(transactions)
 
-    print("\n==================== GROUPED TRANSACTIONS ====================\n")
-    for category in grouped.get_categories():
-        txs = category.get_transactions()
-        print(f"{'=' * 10} CATEGORY: {category.get_name().upper()} ({len(txs)} transactions) {'=' * 10}\n")
-        for tx in txs:
-            print(f"  - {tx.description}")
-        print("\n--------------------------------------------------------------\n")
 
-    if ungrouped:
-        print(f"==================== UNGROUPED TRANSACTIONS ({len(ungrouped)}) ===================\n")
-        for tx in ungrouped:
-            print(f"  - {tx.date}\t{tx.amount}\t{tx.description}")
-        print("\n==============================================================\n")
 
-    # Aggregate by category and month
-    monthly_totals = defaultdict(lambda: defaultdict(float))
+    assert len(ungrouped) == 0
 
-    for category in grouped.get_categories():
-        if category.get_name() == "InternalTransfers":
-            continue
-        for tx in category.get_transactions():
-            month = tx.date.strftime("%Y-%m")
-            monthly_totals[category.get_name()][month] += tx.amount
+    visualizer = ExpenseVisualizer(grouped.get_categories())
 
-    # Identify all months across all categories
-    all_months = sorted({month for m in monthly_totals.values() for month in m})
+    visualizer.plot_monthly_expenses(min_percentage=2)
 
-    # Build and print table header
-    cell_width = 15
-    header = f"| {'Category':<{cell_width}} |" + "".join(
-        f" {month:>{cell_width}} |" for month in all_months)
-    line = "+" + "-"*(cell_width + 2) + "+" + "+".join("-"*(cell_width + 2) for _ in all_months) + "+"
 
-    print("\n=== Monthly Category Totals ===")
-    print(line)
-    print(header)
-    print(line)
 
-    # Print rows per category
-    total_earn = defaultdict(float)
-    total_spent = defaultdict(float)
-
-    for category, months in monthly_totals.items():
-        row = f"| {category:<{cell_width}} |"
-        for month in all_months:
-            amt = months.get(month, 0.0)
-            row += f" {amt:>{cell_width}.2f} |"
-            if amt > 0:
-                total_earn[month] += amt
-            else:
-                total_spent[month] += amt
-        print(row)
-    print(line)
-
-    # Print summary rows
-    row_earn = f"| {'Total Earn':<{cell_width}} |" + "".join(
-        f" {total_earn[m]:>{cell_width}.2f} |" for m in all_months)
-    row_spent = f"| {'Total Spent':<{cell_width}} |" + "".join(
-        f" {abs(total_spent[m]):>{cell_width}.2f} |" for m in all_months)
-
-    print(row_earn)
-    print(row_spent)
-    print(line)
 
 if __name__ == "__main__":
     main()
