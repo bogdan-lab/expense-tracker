@@ -53,12 +53,14 @@ class ExpenseVisualizer:
             logger.info(f"Filtered out categories below {min_percentage:.2f}% of {last_month}: {', '.join(sorted(dropped))}")
         return filtered
 
-    def _plot_bar_chart(self, data: Dict[str, Dict[str, float]], min_percentage: float):
+    def _plot_bar_chart(self, data: Dict[str, Dict[str, float]], min_percentage: float, ax=None):
         categories = sorted(data.keys())
         months = sorted({m for v in data.values() for m in v})
         x = range(len(categories))
-        bar_width = 0.8 / len(months)
-        fig, ax = plt.subplots(figsize=(12, 6))
+        bar_width = 0.8 / len(months) if months else 0.8
+
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(12, 6))
 
         for idx, month in enumerate(months):
             values = [abs(data[cat].get(month, 0.0)) for cat in categories]
@@ -77,18 +79,19 @@ class ExpenseVisualizer:
             x_pos = i + bar_width * len(months) / 2
             ax.text(x_pos, max_val + 0.02 * max_val, f"{max_val:.0f}", ha="center", va="bottom", fontsize=8)
 
-        plt.tight_layout()
-        plt.show()
-
-    def plot_monthly_expenses(self, min_percentage: float = 1.0):
+        if ax is None:
+            plt.tight_layout()
+            plt.show()
+    
+    def plot_monthly_expenses(self, min_percentage: float = 1.0, ax=None):
         logger.info("Preparing data for expense plot...")
         filtered_data = self._filter_categories_by_threshold(min_percentage)
         if not filtered_data:
             logger.warning("No categories meet threshold. Skipping plot.")
             return
-        self._plot_bar_chart(filtered_data, min_percentage)
+        self._plot_bar_chart(filtered_data, min_percentage, ax)
 
-    def plot_monthly_totals(self):
+    def plot_monthly_totals(self, ax=None):
         logger.info("Computing monthly totals for expenses and earnings from split data...")
         total_expenses: Dict[str, float] = defaultdict(float)
         total_earnings: Dict[str, float] = defaultdict(float)
@@ -96,7 +99,6 @@ class ExpenseVisualizer:
         for cat, months in self.expense_monthly_data.items():
             for month, amount in months.items():
                 total_expenses[month] += amount
-
         for cat, months in self.earnings_monthly_data.items():
             for month, amount in months.items():
                 total_earnings[month] += amount
@@ -105,7 +107,8 @@ class ExpenseVisualizer:
         x = range(len(months))
         bar_width = 0.35
 
-        fig, ax = plt.subplots(figsize=(10, 6))
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(10, 6))
 
         exp_values = [abs(total_expenses.get(m, 0.0)) for m in months]
         earn_values = [abs(total_earnings.get(m, 0.0)) for m in months]
@@ -119,13 +122,27 @@ class ExpenseVisualizer:
         ax.set_title("Total Monthly Expenses vs. Earnings")
         ax.legend()
 
+        max_val = max(exp_values + earn_values, default=0)
+        ax.set_ylim(top=max_val * 1.10)
+
         for bar in exp_bars + earn_bars:
             height = bar.get_height()
             ax.annotate(f"{height:.0f}",
                         xy=(bar.get_x() + bar.get_width() / 2, height),
-                        xytext=(0, 3),
+                        xytext=(0, -4),
                         textcoords="offset points",
-                        ha='center', va='bottom', fontsize=8)
+                        ha='center', va='top',
+                        fontsize=8,
+                        clip_on=True)
 
+        if ax is None:
+            plt.tight_layout()
+            plt.show()
+
+    def plot_combined_summary(self, min_percentage: float = 1.0):
+        logger.info("Generating combined summary plot...")
+        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), height_ratios=[1, 2])
+        self.plot_monthly_totals(ax=ax1)
+        self.plot_monthly_expenses(min_percentage=min_percentage, ax=ax2)
         plt.tight_layout()
         plt.show()
