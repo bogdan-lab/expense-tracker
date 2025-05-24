@@ -29,38 +29,36 @@ class ExpenseVisualizer:
                 self.monthly_data[name][month] += -tx.amount# Show expenses as positive bars
         logger.info(f"Skipped {skipped} category(ies) named 'InternalTransfers'")  
 
-    def plot_monthly_expenses(self, min_percentage: float = 1.0):
-        logger.info("Preparing expense data for plotting...")
+    def _filter_categories_by_threshold(self, min_percentage: float) -> Dict[str, Dict[str, float]]:
         data = {cat: months for cat, months in self.monthly_data.items() if cat != "Income"}
+        months = sorted({m for v in data.values() for m in v})
+        if not months:
+            return {}
 
-        all_months = sorted({m for v in data.values() for m in v})
-        if not all_months:
-            logger.warning("No data to plot.")
-            return
+        last_month = months[-1]
+        total = sum(months.get(last_month, 0.0) for months in data.values())
+        threshold = (min_percentage / 100.0) * total
 
-        last_month = all_months[-1]
-        total_last_month = sum(months.get(last_month, 0.0) for months in data.values())
-        threshold = (min_percentage / 100.0) * total_last_month
-
-        filtered_data = {
+        filtered = {
             cat: months for cat, months in data.items()
             if max(months.values(), default=0.0) >= threshold
         }
 
-        dropped = set(data) - set(filtered_data)
+        dropped = set(data) - set(filtered)
         if dropped:
-            logger.info(f"Filtered out categories with values below {min_percentage:.2f}% of last month's total: {', '.join(sorted(dropped))}")
+            logger.info(f"Filtered out categories below {min_percentage:.2f}% of {last_month}: {', '.join(sorted(dropped))}")
+        return filtered
 
-        categories = sorted(filtered_data.keys())
-        months = sorted({m for v in filtered_data.values() for m in v})
-
+    def _plot_bar_chart(self, data: Dict[str, Dict[str, float]], min_percentage: float):
+        categories = sorted(data.keys())
+        months = sorted({m for v in data.values() for m in v})
         x = range(len(categories))
         bar_width = 0.8 / len(months)
         fig, ax = plt.subplots(figsize=(12, 6))
 
         for idx, month in enumerate(months):
-            values = [filtered_data[cat].get(month, 0.0) for cat in categories]
-            logger.debug(f"Plotting month {month} with {sum(1 for v in values if v != 0)} non-zero bars.")
+            values = [data[cat].get(month, 0.0) for cat in categories]
+            logger.debug(f"Plotting month {month} with {sum(1 for v in values if v != 0)} bars.")
             positions = [i + idx * bar_width for i in x]
             ax.bar(positions, values, width=bar_width, label=month)
 
@@ -70,12 +68,19 @@ class ExpenseVisualizer:
         ax.set_title(f"Monthly Expenses by Category (min {min_percentage:.2f}% of last month)")
         ax.legend(title="Month")
 
-        # Annotate max monthly value for each category horizontally
         for i, cat in enumerate(categories):
-            max_val = max(filtered_data[cat].values(), default=0.0)
+            max_val = max(data[cat].values(), default=0.0)
             x_pos = i + bar_width * len(months) / 2
             ax.text(x_pos, max_val + 0.02 * max_val, f"{max_val:.0f}", ha="center", va="bottom", fontsize=8)
 
         plt.tight_layout()
         plt.show()
         logger.info("Expense plot displayed successfully.")
+
+    def plot_monthly_expenses(self, min_percentage: float = 1.0):
+        logger.info("Preparing data for expense plot...")
+        filtered_data = self._filter_categories_by_threshold(min_percentage)
+        if not filtered_data:
+            logger.warning("No categories meet threshold. Skipping plot.")
+            return
+        self._plot_bar_chart(filtered_data, min_percentage)
