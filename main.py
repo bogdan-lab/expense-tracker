@@ -49,7 +49,8 @@ def main():
 
     visualizer = ExpenseVisualizer(grouped.get_categories())
 
-    visualizer.plot_monthly_expenses(min_percentage=2)
+    # visualizer.plot_monthly_expenses(min_percentage=2)
+    visualizer.plot_monthly_totals()
 
 
 
