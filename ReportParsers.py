@@ -4,6 +4,11 @@ from typing import List, Tuple
 import re
 import csv
 import os
+import logging
+
+
+logger = logging.getLogger(__name__)
+
 
 Transaction = namedtuple('Transaction', [
     'sender',
@@ -30,34 +35,78 @@ def parse_filename(file_path: str) -> Tuple[str, str]:
     return match.group(1).lower(), match.group(2).lower()
 
 
-def parse_abn_amro_transactions(file_path: str) -> List[Transaction]:
-    transactions = []
-    with open(file_path, encoding='utf-8') as f:
-        for line in f:
-            parts = line.strip().split()
-            if len(parts) < 8:
-                raise ValueError(f"Invalid transaction row: {line.strip()}")
-            account_number = parts[0]
-            currency = parts[1]
-            try:
-                date_parsed: date = datetime.strptime(parts[2], "%Y%m%d").date()
-            except ValueError:
-                raise ValueError(f"Invalid date format in row: {line.strip()}")
-            balance_before = parse_float(parts[3])
-            balance_after = parse_float(parts[4])
-            amount = parse_float(parts[6])
-            description = ' '.join(parts[7:])
-            transactions.append(Transaction(
-                account_number,
-                currency,
-                date_parsed,
-                balance_before,
-                balance_after,
-                amount,
-                description
-            ))
-    return transactions
+def parse_abn_amro_receiver(raw_description: str) -> str:
+    # Normalize spacing and split into parts
+    tabbed = re.sub(r'\s{2,}', '\t', raw_description)
+    parts = tabbed.split('\t')
 
+    # Case 1: NAME/
+    match_name = re.search(r'NAME/([^/]+)', raw_description)
+    if match_name:
+        return match_name.group(1).strip()
+
+    # Case 2: Naam:
+    match_naam = re.search(r'Naam:\s*(.*)', raw_description)
+    if match_naam:
+        return match_naam.group(1).strip()
+
+    # Case 3: BEA, Betaalpas
+    if len(parts) >= 2 and parts[0].strip() == "BEA, Betaalpas":
+        bea_match = re.match(r'^(.*?),PAS', parts[1])
+        if bea_match:
+            return bea_match.group(1).strip()
+
+    # Case 4: eCom, Apple Pay
+    if len(parts) >= 2 and parts[0].strip() == "eCom, Apple Pay":
+        return parts[1].strip()
+
+    # Case 5: ABN AMRO Bank N.V.
+    if parts[0].strip() == "ABN AMRO Bank N.V.":
+        return "ABN AMRO Bank N.V."
+
+    raise ValueError(f"Unrecognized receiver format in description: {raw_description}")
+
+def parse_abn_amro_transactions(filepath: str) -> List[Transaction]:
+    transactions = []
+    sender, _ = parse_filename(filepath)
+
+    with open(filepath, encoding='utf-8') as f:
+        for line in f:
+            raw = line.strip()
+            parts = raw.split('\t')
+            
+            if len(parts) != 8:
+                raise ValueError(f"Invalid row format: {raw}")
+
+            currency = parts[1]
+
+            try:
+                date = datetime.strptime(parts[2], "%Y%m%d").date()
+            except ValueError:
+                raise ValueError(f"Invalid date format: {raw}")
+
+            try:
+                amount = parse_float(parts[6])
+            except ValueError:
+                raise ValueError(f"Invalid amount: {raw}")
+
+            try:
+                receiver = parse_abn_amro_receiver(parts[7])
+            except ValueError as e:
+                print(f"{e}")
+                print(parts[7])
+                continue
+
+            transactions.append(Transaction(
+                sender=sender,
+                receiver=receiver,
+                currency=currency,
+                date=date,
+                amount=amount,
+                raw=raw
+            ))
+
+    return transactions
 
 def parse_ing_transactions(file_path: str) -> List[Transaction]:
     transactions = []
