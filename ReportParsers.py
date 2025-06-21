@@ -1,20 +1,34 @@
 from collections import namedtuple
 from datetime import datetime, date
-from typing import List
+from typing import List, Tuple
+import re
 import csv
+import os
 
 Transaction = namedtuple('Transaction', [
-    'account_number',
+    'sender',
+    'receiver',
     'currency',
     'date',
-    'balance_before',
-    'balance_after',
     'amount',
-    'description'
+    'raw'
 ])
 
 def parse_float(value: str) -> float:
     return float(value.replace(',', '.'))
+
+def parse_filename(file_path: str) -> Tuple[str, str]:
+    """
+    Extracts bank name and account owner from a full file path.
+    Returns both values in lowercase.
+    Expected filename format: '<bank>_<owner>_<...>.ext'
+    """
+    filename = os.path.basename(file_path)
+    match = re.search(r'([^_/\\]+)_([^_/\\]+)_.+\.\w+$', filename)
+    if not match:
+        raise ValueError(f"Filename '{filename}' does not match expected format '<bank>_<owner>_<...>.ext'")
+    return match.group(1).lower(), match.group(2).lower()
+
 
 def parse_abn_amro_transactions(file_path: str) -> List[Transaction]:
     transactions = []
