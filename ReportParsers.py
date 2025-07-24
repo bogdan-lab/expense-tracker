@@ -35,36 +35,36 @@ def parse_filename(file_path: str) -> Tuple[str, str]:
     return match.group(1).lower(), match.group(2).lower()
 
 
+
 def parse_abn_amro_receiver(raw_description: str) -> str:
-    # Normalize spacing and split into parts
-    tabbed = re.sub(r'\s{2,}', '\t', raw_description)
-    parts = tabbed.split('\t')
+    if raw_description.startswith("BEA, Betaalpas"):
+        match = re.search(r"BEA, Betaalpas\s+(.*?),PAS", raw_description)
+        if match:
+            return match.group(1).strip()
+        raise ValueError(f"Could not extract receiver from BEA, Betaalpas description: {raw_description}")
 
-    # Case 1: NAME/
-    match_name = re.search(r'NAME/([^/]+)', raw_description)
-    if match_name:
-        return match_name.group(1).strip()
+    if raw_description.startswith("SEPA"):
+        match = re.search(r"Naam:\s*(.+?)(?:\s{2,}|$)", raw_description)
+        if match:
+            return match.group(1).strip()
+        raise ValueError(f"Could not extract receiver from SEPA description: {raw_description}")
 
-    # Case 2: Naam:
-    match_naam = re.search(r'Naam:\s*(.*)', raw_description)
-    if match_naam:
-        return match_naam.group(1).strip()
+    if raw_description.startswith("/TRTP"):
+        match = re.search(r"/NAME/([^/]+)", raw_description)
+        if match:
+            return match.group(1).strip()
+        raise ValueError(f"Could not extract receiver from /TRTP description: {raw_description}")
 
-    # Case 3: BEA, Betaalpas
-    if len(parts) >= 2 and parts[0].strip() == "BEA, Betaalpas":
-        bea_match = re.match(r'^(.*?),PAS', parts[1])
-        if bea_match:
-            return bea_match.group(1).strip()
+    if raw_description.startswith("eCom, Apple Pay"):
+        columns = re.split(r"\s{2,}", raw_description)
+        if len(columns) >= 2:
+            return columns[1].strip()
+        raise ValueError(f"Could not extract receiver from eCom, Apple Pay description: {raw_description}")
 
-    # Case 4: eCom, Apple Pay
-    if len(parts) >= 2 and parts[0].strip() == "eCom, Apple Pay":
-        return parts[1].strip()
-
-    # Case 5: ABN AMRO Bank N.V.
-    if parts[0].strip() == "ABN AMRO Bank N.V.":
+    if raw_description.startswith("ABN AMRO Bank N.V."):
         return "ABN AMRO Bank N.V."
 
-    raise ValueError(f"Unrecognized receiver format in description: {raw_description}")
+    raise ValueError(f"Unrecognized receiver format: {raw_description}")
 
 def parse_abn_amro_transactions(filepath: str) -> List[Transaction]:
     transactions = []

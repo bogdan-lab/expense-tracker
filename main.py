@@ -27,10 +27,13 @@ def main():
     # print(parse_filename("/home/bohdan/workplace/Bibliotech/Python/expense-tracker/ABNAMRO_Bohdan_02.2025.txt"))
     # print(parse_filename("Bibliotech/Python/expense-tracker/ABNAMRO_Bohdan_02.2025.txt"))
     parser = argparse.ArgumentParser(description="Process bank transaction file and group by category.")
-    parser.add_argument("path", type=str, help="Path to the transaction file(s)")
+    parser.add_argument("path", nargs='+', help="Path to the transaction file(s)")
     args = parser.parse_args()
 
-    transactions = parse_abn_amro_transactions(args.path)
+    
+    transactions = []
+    for el in args.path:
+        transactions += parse_abn_amro_transactions(el)
     # print(transactions)
 
     # reports = ReportAggregator(args.path)
