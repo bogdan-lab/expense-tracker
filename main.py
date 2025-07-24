@@ -1,5 +1,6 @@
 import argparse
-from ReportParsers import Transaction, parse_filename, parse_ing_transactions
+from ReportParsers import Transaction
+from TransactionTransformers import lowercase_str_fields
 from Categories import (
     Groceries, Transport, HouseholdGoods, Restaurants, 
     Gina, Health, Clothes, Child, Entertainment, Taxes, 
@@ -18,36 +19,27 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
 )
 
+logger = logging.getLogger(__name__)
 
 
 def main():
-    # print(parse_filename("Revolut_Daria_01.2025_04.2025.csv"))
-    # print(parse_filename("ING_Bohdan_01.2025.csv"))
-    # print(parse_filename("ABNAMRO_Bohdan_02.2025.txt"))
-    # print(parse_filename("/home/bohdan/workplace/Bibliotech/Python/expense-tracker/ABNAMRO_Bohdan_02.2025.txt"))
-    # print(parse_filename("Bibliotech/Python/expense-tracker/ABNAMRO_Bohdan_02.2025.txt"))
     parser = argparse.ArgumentParser(description="Process bank transaction file and group by category.")
-    parser.add_argument("path", nargs='+', help="Path to the transaction file(s)")
+    parser.add_argument("path", type=str, help="Path to the transaction file(s)")
     args = parser.parse_args()
 
-    
-    transactions = []
-    for el in args.path:
-        transactions += parse_ing_transactions(el)
+    reports = ReportAggregator(args.path)
+    transactions: list[Transaction] = (
+        reports.get_abn_transactions() +
+        reports.get_ing_transactions() +
+        reports.get_revolut_transactions()
+    )
 
-    for el in transactions:
-        print(' '.join(str(getattr(el, f)) for f in el._fields if f != 'raw'))
+    logger.info(f"Number of transactions: {len(transactions)}")
 
-    # print(transactions)
+    transactions = lowercase_str_fields(transactions)
 
-    # reports = ReportAggregator(args.path)
-    # transactions: list[Transaction] = (
-    #     reports.get_abn_transactions() +
-    #     reports.get_ing_transactions() +
-    #     reports.get_revolut_transactions()
-    # )
-
-    # print(f"Number of transactions: {len(transactions)}")
+    for tx in transactions:
+        logger.info(' '.join(str(getattr(tx, f)) for f in tx._fields if f != 'raw'))
 
     # grouped = GroupedTransactions(Groceries(), Transport(), 
     #                               HouseholdGoods(), Restaurants(), 

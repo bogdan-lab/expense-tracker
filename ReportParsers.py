@@ -32,7 +32,7 @@ def parse_filename(file_path: str) -> Tuple[str, str]:
     match = re.search(r'([^_/\\]+)_([^_/\\]+)_.+\.\w+$', filename)
     if not match:
         raise ValueError(f"Filename '{filename}' does not match expected format '<bank>_<owner>_<...>.ext'")
-    return '_'.join((match.group(1).lower(), match.group(2).lower()))
+    return '_'.join((match.group(1), match.group(2)))
 
 
 
@@ -156,6 +156,7 @@ def parse_revolut_transactions(file_path: str) -> List[Transaction]:
 
     with open(file_path, encoding="utf-8") as f:
         reader = csv.reader(f)
+        header = next(reader)
 
         for row in reader:
             date_str = row[2].strip().split()[0]

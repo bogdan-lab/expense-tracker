@@ -27,7 +27,7 @@ class ReportAggregator:
             print(f"Ignoring file without bank prefix: {filename}")
             return
         bank = filename.split('_')[0]
-        if bank == "ABN":
+        if bank == "ABNAMRO":
             self.files_by_bank["ABN"].append(full_path)
         elif bank == "ING":
             self.files_by_bank["ING"].append(full_path)
