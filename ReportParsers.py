@@ -32,7 +32,7 @@ def parse_filename(file_path: str) -> Tuple[str, str]:
     match = re.search(r'([^_/\\]+)_([^_/\\]+)_.+\.\w+$', filename)
     if not match:
         raise ValueError(f"Filename '{filename}' does not match expected format '<bank>_<owner>_<...>.ext'")
-    return match.group(1).lower(), match.group(2).lower()
+    return '_'.join((match.group(1).lower(), match.group(2).lower()))
 
 
 
@@ -68,7 +68,7 @@ def parse_abn_amro_receiver(raw_description: str) -> str:
 
 def parse_abn_amro_transactions(filepath: str) -> List[Transaction]:
     transactions = []
-    sender, _ = parse_filename(filepath)
+    sender = parse_filename(filepath)
 
     with open(filepath, encoding='utf-8') as f:
         for line in f:
@@ -110,8 +110,11 @@ def parse_abn_amro_transactions(filepath: str) -> List[Transaction]:
 
 def parse_ing_transactions(file_path: str) -> List[Transaction]:
     transactions = []
+    sender = parse_filename(file_path)
+
     with open(file_path, encoding="utf-8") as f:
-        reader = csv.reader(f, delimiter=';')
+        csv_delimiter = ';'
+        reader = csv.reader(f, delimiter=csv_delimiter)
         headers = next(reader)
 
         if "EUR" not in headers[6]:
@@ -124,9 +127,6 @@ def parse_ing_transactions(file_path: str) -> List[Transaction]:
             except ValueError:
                 raise ValueError(f"Invalid date format in ING row: {';'.join(row)}")
 
-            account_number = row[2].strip()
-            currency = "EUR"
-
             direction = row[5].strip()
             if direction == "Debit":
                 amount = -parse_float(row[6])
@@ -138,21 +138,21 @@ def parse_ing_transactions(file_path: str) -> List[Transaction]:
             description = row[8].strip()
 
             transactions.append(Transaction(
-                account_number,
-                currency,
-                tx_date,
-                None,
-                None,
-                amount,
-                description
+                sender=sender,
+                receiver=row[1].strip(),
+                currency="EUR",
+                date=tx_date,
+                amount=amount,
+                raw=csv_delimiter.join(row)
             ))
+
 
     return transactions
 
 
 def parse_revolut_transactions(file_path: str) -> List[Transaction]:
     transactions = []
-    sender, _ = parse_filename(file_path)
+    sender = parse_filename(file_path)
 
     with open(file_path, encoding="utf-8") as f:
         reader = csv.reader(f)

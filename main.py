@@ -1,5 +1,5 @@
 import argparse
-from ReportParsers import Transaction, parse_filename, parse_revolut_transactions
+from ReportParsers import Transaction, parse_filename, parse_ing_transactions
 from Categories import (
     Groceries, Transport, HouseholdGoods, Restaurants, 
     Gina, Health, Clothes, Child, Entertainment, Taxes, 
@@ -33,7 +33,11 @@ def main():
     
     transactions = []
     for el in args.path:
-        transactions += parse_revolut_transactions(el)
+        transactions += parse_ing_transactions(el)
+
+    for el in transactions:
+        print(' '.join(str(getattr(el, f)) for f in el._fields if f != 'raw'))
+
     # print(transactions)
 
     # reports = ReportAggregator(args.path)
