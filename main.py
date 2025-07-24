@@ -1,5 +1,5 @@
 import argparse
-from ReportParsers import Transaction, parse_filename, parse_abn_amro_transactions
+from ReportParsers import Transaction, parse_filename, parse_revolut_transactions
 from Categories import (
     Groceries, Transport, HouseholdGoods, Restaurants, 
     Gina, Health, Clothes, Child, Entertainment, Taxes, 
@@ -33,7 +33,7 @@ def main():
     
     transactions = []
     for el in args.path:
-        transactions += parse_abn_amro_transactions(el)
+        transactions += parse_revolut_transactions(el)
     # print(transactions)
 
     # reports = ReportAggregator(args.path)

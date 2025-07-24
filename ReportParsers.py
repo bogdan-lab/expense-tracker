@@ -152,9 +152,10 @@ def parse_ing_transactions(file_path: str) -> List[Transaction]:
 
 def parse_revolut_transactions(file_path: str) -> List[Transaction]:
     transactions = []
+    sender, _ = parse_filename(file_path)
+
     with open(file_path, encoding="utf-8") as f:
         reader = csv.reader(f)
-        headers = next(reader)
 
         for row in reader:
             date_str = row[2].strip().split()[0]
@@ -163,19 +164,14 @@ def parse_revolut_transactions(file_path: str) -> List[Transaction]:
             except ValueError:
                 raise ValueError(f"Invalid date format in Revolut row: {','.join(row)}")
 
-            account_number = None
-            currency = row[7].strip()
-            amount = parse_float(row[5])
-            description = row[4].strip()
-
             transactions.append(Transaction(
-                account_number,
-                currency,
-                tx_date,
-                None,
-                None,
-                amount,
-                description
+                sender=sender,
+                receiver=row[4].strip(),
+                currency=row[7].strip(),
+                date=tx_date,
+                amount=parse_float(row[5]),
+                raw=','.join(row)
             ))
+
 
     return transactions
