@@ -1,6 +1,6 @@
 import argparse
 from ReportParsers import Transaction
-from TransactionTransformers import lowercase_str_fields
+from TransactionTransformers import lowercase_str_fields, drop_duplicates
 from Categories import (
     Groceries, Transport, HouseholdGoods, Restaurants, 
     Gina, Health, Clothes, Child, Entertainment, Taxes, 
@@ -34,12 +34,15 @@ def main():
         reports.get_revolut_transactions()
     )
 
-    logger.info(f"Number of transactions: {len(transactions)}")
+    logger.info(f"Initial number of transactions: {len(transactions)}")
 
     transactions = lowercase_str_fields(transactions)
+    transactions = drop_duplicates(transactions)
+    
+    logger.info(f"Number of transactions after duplicate dropping: {len(transactions)}")
 
-    for tx in transactions:
-        logger.info(' '.join(str(getattr(tx, f)) for f in tx._fields if f != 'raw'))
+    # for tx in transactions:
+    #     logger.info(' '.join(str(getattr(tx, f)) for f in tx._fields if f != 'raw'))
 
     # grouped = GroupedTransactions(Groceries(), Transport(), 
     #                               HouseholdGoods(), Restaurants(), 
