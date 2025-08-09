@@ -1,7 +1,21 @@
 from abc import ABC, abstractmethod
-from typing import List
 from ReportParsers import Transaction
 import re
+from datetime import date
+from typing import List, Tuple, Union
+
+
+def match_receiver_and_date(pattern: re.Pattern, match_date:Union[date, Tuple[date]], transaction: Transaction)-> bool:
+    result = pattern.search(transaction.receiver) 
+    if match_date is None:
+        return result
+    if isinstance(match_date, tuple):
+        assert len(match_date) == 2
+        return result and transaction.date >= match_date[0] and transaction.date <= match_date[1]
+    elif isinstance(match_date, date):
+        return result and transaction.date == match_date
+    else:
+        raise ValueError(f"Unexpected type of match_date {match_date}, {type(match_date)}")
 
 
 class Category(ABC):
@@ -34,16 +48,13 @@ class Groceries(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"Albert Heijn", re.IGNORECASE),
-            re.compile(r"AH to Go", re.IGNORECASE),
-            re.compile(r"Kiosk"),
-            re.compile(r"Jumbo", re.IGNORECASE),
-            re.compile(r"Smak"),
-            re.compile(r"NAME/PARFENCHIKOVA"),
-            re.compile(r"Durak Sweets"),
-            re.compile(r"Boodschap"),
+            re.compile(r"^(bck\*)?jumbo"),
+            re.compile(r"^(bck\*)?kiosk"),
+            re.compile(r"^albert heijn(?:\s|$)"),
+            re.compile(r"^(bck\*)?(.*)ah to go(?:\s|$)"),
+            re.compile(r"^smak$"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class Transport(Category):
@@ -52,12 +63,12 @@ class Transport(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r".*NS.*REIZIGERS.*", re.IGNORECASE),
-            re.compile(r"^Uber$"),
-            re.compile(r"NAME/Uber"),
-            re.compile(r"www.ovpay.nl"),
+            re.compile(r"^nlov[a-z0-9]{14}$"),
+            re.compile(r"^uber$"),
+            re.compile(r"^ns groep iz ns reizigers$"),
+            re.compile(r"^greenwheels\s"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class Insurance(Category):
@@ -66,12 +77,11 @@ class Insurance(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"ABN AMRO SCHADEV NV"),
-            re.compile(r"Premie Zilveren Kruis Relatienummer 190009575"),
-            re.compile(r"NAME/Zilveren Kruis Zorgverzekeringen NV"),
-            re.compile(r"Allianz Nederland Levensve"),
+            re.compile(r"^abn amro schadev nv$"),
+            re.compile(r"^zilveren kruis\s"),
+            re.compile(r"^allianz\s"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class HouseholdGoods(Category):
@@ -79,29 +89,25 @@ class HouseholdGoods(Category):
         super().__init__('Household goods')
 
     def is_matched(self, transaction: Transaction) -> bool:
-        patterns = [
-            re.compile(r"(?i)(\bGamma\b|/GAMMA/)"),
-            re.compile(r"NAME/De Gouden Sleutel"),
-            re.compile(r"Coolblue"),
-            re.compile(r"HEMA"),
-            re.compile(r"NAME/Amazon "),
-            re.compile(r"Naam: Amazon"),
-            re.compile(r"NAME/bol.com"),
-            re.compile(r"NAME/Klusbedrijf MrFix.nl B.V."),
-            re.compile(r"NAME/Maghnouji via Tikkie"),
-            re.compile(r"Rituals"),
-            re.compile(r"Naam: IKEA"),
-            re.compile(r"NAME/IKEA"),
-            re.compile(r"LUSH"),
-            re.compile(r"\sHema\s"),
-            re.compile(r"\sAction\s"),
-            re.compile(r"Motel a Miio"),
-            re.compile(r"Actievloeren"),
-            re.compile(r"Patelnia\.nl"),
-            re.compile(r"\sJYSK\s"),
-            re.compile(r"rugvista\.com"),
+        match_args = [
+            (re.compile(r"^amazon [a-z0-9]+"), None),
+            (re.compile(r"^ikea bv$"), None),
+            (re.compile(r"^hema(?:\s|$)"), None),
+            (re.compile(r"^gamma(?:$|-nl|\s)"), None),
+            (re.compile(r"^bol\.com$"), None),
+            (re.compile(r"^rituals(cosmetics)?$"), None),
+            (re.compile(r"^action [0-9]+$"), None),
+            (re.compile(r"^lush\s"), None),
+            (re.compile(r"^coolblue$"), None),
+            (re.compile(r"motel a miio"), None),
+            (re.compile(r"^patelnia\.nl$"), None),
+            (re.compile(r"^klusbedrijf mrfix\.nl b\.v\."), None),
+            (re.compile(r"^klarna bank\s"), date(2025, 1, 15)),
+            (re.compile(r"^jysk\s"), None),
+            (re.compile(r"^de gouden sleutel$"), None),
+            (re.compile(r"^actievloeren\s"), None),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(match_receiver_and_date(p, d, transaction) for p, d in match_args)
 
 
 class Restaurants(Category):
@@ -110,33 +116,32 @@ class Restaurants(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"McTurfmarkt.*NR:6NXV02", re.IGNORECASE),  # MacDonalds on Turfmarkt street
-            re.compile(r"BK Den Haag Spui"), # BK for Burger King
-            re.compile(r"Starbucks"),
-            re.compile(r"Cafe Van Beek"),
-            re.compile(r"^Uber Eats$"),
-            re.compile(r"Noodlebar Herengracht"),
-            re.compile(r"Zettle_\*House of Tribe"),
-            re.compile(r"Zettle_\*Coffee Garden"),
-            re.compile(r"NAME/AAB INZ TIKKIE.*Van I Pozhidaeva"),
-            re.compile(r"BCK\*Bakers House"),
-            re.compile(r"Madame Croissant"),
-            re.compile(r"Coffee District"),
-            re.compile(r"DE Cafe New Babylon"),
-            re.compile(r"Benji s B\.V\."),
-            re.compile(r"JOE THE JUICE"),
-            re.compile(r"COFFEE AND COCONUTS"),
-            re.compile(r"CHCO Den Haag"),
-            re.compile(r"Eetcafe El Mamma Booga"),
-            re.compile(r"The Villy The Roofs"),
-            re.compile(r"The Villy The Roofs"),
-            re.compile(r"Perron X Coffe"),
-            re.compile(r"Multivlaai"),
-            re.compile(r"circle lunchro"),
-            re.compile(r"RdvR"),
-            re.compile(r"PQNL GELDERLAND"),
+            re.compile(r"^de cafe new babylon$"),
+            re.compile(r"^coffee district"),
+            re.compile(r"^uber eats$"),
+            re.compile(r"^(bck\*)?bakers house$"),
+            re.compile(r"^(ccv\*)?starbucks\s"),
+            re.compile(r"^(zettle_\*)?perron x coffe$"),
+            re.compile(r"^mcturfmarkt$"),
+            re.compile(r"^(zettle_\*)?house of tribe$"),
+            re.compile(r"^(zettle_\*)?coffee garden$"),
+            re.compile(r"^(zettle_\*)?circle lunchro$"),
+            re.compile(r"^joe\s+the juice\s"),
+            re.compile(r"^coffee and coconuts$"),
+            re.compile(r"^chco den haag$"),
+            re.compile(r"^bk den haag spui$"),
+            re.compile(r"^(cm\.\*)?rdvr$"),
+            re.compile(r"^(ccv\*)?pqnl gelderland$"),
+            re.compile(r"^the villy the roofs$"),
+            re.compile(r"^noodlebar herengracht$"),
+            re.compile(r"^madame croissant$"),
+            re.compile(r"^eetcafe el mamma booga$"),
+            re.compile(r"^(ccv\*)?multivlaai\s"),
+            re.compile(r"^benji\s"),
+            re.compile(r"^(bck\*)?durak sweets$"),
+            re.compile(r"^(bck\*)?cafe van beek$")
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class Gina(Category):
@@ -145,13 +150,12 @@ class Gina(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"NAME/Petsplace"),
-            re.compile(r"PP_Amsterdam"),
-            re.compile(r"Naam: ZOOPLUS"),
-            re.compile(r"NAME/ZOOPLUS"),
-            re.compile(r"DIER VAN NU"),
+            re.compile(r"^pp_amsterdam$"),
+            re.compile(r"^zooplus\s"),
+            re.compile(r"^petsplace"),
+            re.compile(r"^(ccv\*)?dier van nu$"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class Health(Category):
@@ -160,20 +164,16 @@ class Health(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"Holland & Barrett"),
-            re.compile(r"^coderscourse.com$"), # SEKTA
-            re.compile(r"^Ondalinda$"), # SEKTA
-            re.compile(r"NAME/Etos B.V."), 
-            re.compile(r"ETOS"), 
-            re.compile(r"Naam: Etos B.V."), 
-            re.compile(r"NAME/Newpharma via Worldline"), 
-            re.compile(r"Apotheek"), 
-            re.compile(r"DAP Bezuidenhout"), 
-            re.compile(r"Stichting Dienstap"), 
+            re.compile(r"^etos [a-z0-9\.]+"),
+            re.compile(r"^holland \& barrett$"),
+            re.compile(r"^ondalinda$"),         # SEKTA
+            re.compile(r"^newpharma\s"),
+            re.compile(r"^dap bezuidenhout\s"),
+            re.compile(r"^coderscourse\.com$"),
+            re.compile(r"^(ccv\*)?stichting dienstap$"),
+            re.compile(r"apotheek\s"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
-
-
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class Clothes(Category):
@@ -182,15 +182,15 @@ class Clothes(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"Manfield"),
-            re.compile(r"Naam: SHEIN.COM"),
-            re.compile(r"NAME/H\.M Online"),
-            re.compile(r"NAME/Schiesser GmbH"),
-            re.compile(r"Victorias Secr"),
-            re.compile(r"OtherStories"),
-            re.compile(r"Nimara"),
+            re.compile(r"^shein\.com$"),
+            re.compile(r"^schiesser\s"),
+            re.compile(r"^h\.m online$"),
+            re.compile(r"^globale$"),
+            re.compile(r"^otherstories$"),
+            re.compile(r"^nimara\s"),
+            re.compile(r"^manfield\s"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class Child(Category):
@@ -199,17 +199,15 @@ class Child(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"Baby-Dump", re.IGNORECASE),
-            re.compile(r"INGBNL2A/NAME/UWV/"),
-            re.compile(r"Kruidvat"),
-            re.compile(r"NAME/Kruidvat"),
-            re.compile(r"NAME/Lovevery Europe B\.V\."),
-            re.compile(r"NAME/Baby-Dump BV"),
-            re.compile(r"NAME/Zeeman"),
-            re.compile(r"NAME/Babywinkel B\.V\."),
-            re.compile(r"Simply Colors"),
+            re.compile(r"^baby-dump b\.?v\.?$"),
+            re.compile(r"^babywinkel b\.v\."),
+            re.compile(r"^kruidvat(?:\s|$)"),
+            re.compile(r"^uwv$"),
+            re.compile(r"^lovevery\s"),
+            re.compile(r"^zeeman$"),
+            re.compile(r"^simply colors nederland b\.v\."),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class Entertainment(Category):
@@ -226,12 +224,11 @@ class Taxes(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"NAME/GEM DENHAAG-BELASTINGEN"),
-            re.compile(r"NAME/Gemeente Amsterdam Belastingen"),
-            re.compile(r"Naam: BELASTINGDIENST"),
-            re.compile(r"NAME/Regionale Belasting Groep"),
+            re.compile(r"^immigratie en naturalisatie dienst$"), 
+            re.compile(r"^gemeente\s"),
+            re.compile(r"belasting"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 class Documents(Category):
     def __init__(self):
@@ -239,13 +236,12 @@ class Documents(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"NAME/Gemeente Amsterdam/"),
-            re.compile(r"NAME/Lvov A.M. te Den Haag"),
-            re.compile(r"Printed\.nl"),
-            re.compile(r"NAME/kudinova via Tikkie"),
-            re.compile(r"Publiekszaken"),
+            re.compile(r"^publiekszaken$"),
+            re.compile(r"^lvov a\.m\.\s"),
+            re.compile(r"^printed\.nl$"),
+            re.compile(r"^kudinova via tikkie$"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 class VVE(Category):
     def __init__(self):
@@ -253,10 +249,10 @@ class VVE(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"VvE La Fenetre", re.IGNORECASE),
-            re.compile(r"NAME/Vereniging van Eigenaars la Fen"),
+            re.compile(r"^vve la fenetre$"),
+            re.compile(r"^vereniging van eigenaars la fen"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class Bills(Category):
@@ -265,13 +261,13 @@ class Bills(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"/NAME/ENECO\b"),
-            re.compile(r"/NAME/ZIGGO SERVICES BV/"),
-            re.compile(r"Naam: ODIDO NETHERLANDS B.V."),
-            re.compile(r"NAME/ODIDO NETHERLANDS B.V."),
-            re.compile(r"NAME/DUNEA DUIN WATER"),
+            re.compile(r"^odido netherlands b.v.$"),
+            re.compile(r"^ziggo services bv$"),
+            re.compile(r"^eneco services$"),
+            re.compile(r"^magticom$"),
+            re.compile(r"^dunea duin\s"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class Banks(Category):
@@ -280,10 +276,11 @@ class Banks(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"ABN AMRO Bank N.V."),
-            re.compile(r"ING BANK N.V."),
+            re.compile(r"^abn amro bank n.v.$"),
+            re.compile(r"^kosten tweede rekeninghouder$"),
+            re.compile(r"^kosten oranjepakket$"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 class InternalTransfers(Category):
     def __init__(self):
@@ -291,29 +288,22 @@ class InternalTransfers(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"Naam:\s+D\.?\s*Krymova", re.IGNORECASE),
-            re.compile(r"Naam: B LAKATOSH"),
-            re.compile(r"Hr B Lakatosh,Mw D Krymova"),
-            re.compile(r"/TRTP/iDEAL/IBAN/NL58CITI2032329913/BIC/CITINL2X/NAME/Revolut Bank UAB"),
-            re.compile(r"NAME/Interactive Brokers Ireland Limited"),
-            re.compile(r"NAME/A LAKATOSH"),
-            re.compile(r"Name: Bohdan Lakatosh"),
-            re.compile(r"IDEAL Top-Up"),
-            re.compile(r"Apple Pay Top-Up by \*9314"),
-            re.compile(r"^MoonPay$"),
-            re.compile(r"^Mpay\*dkrymova$"),
-            re.compile(r"To Oranje spaarrekening V11514157"),
-            re.compile(r"From Oranje spaarrekening V11514157"),
-            re.compile(r"IBAN/NL71ABNA0119713578/BIC/ABNANL2A/NAME/D. Krymova"),
-            re.compile(r"IBAN/NL71ABNA0119713578/BIC/ABNANL2A/NAME/D KRYMOVA"),
-            re.compile(r"NAME/B LAKATOSH"),
-            re.compile(r"NAME/D KRYMOVA"),
-            re.compile(r"Naam: Safe Net"),
-            re.compile(r"NAME/Necessities"),
-            re.compile(r"Apple Pay Revolut\*\*3740\*"),
-            re.compile(r"Naam: Necessities"),
+            re.compile(r"^safe net$"),
+            re.compile(r"^d\.? krymova$"),
+            re.compile(r"^hr b lakatosh,mw d krymova"),
+            re.compile(r"^mpay\*dkrymova$"),
+            re.compile(r"^(b|bohdan) lakatosh$"),
+            re.compile(r"^necessities$"),
+            re.compile(r"^revolut.*3740.*$"),
+            re.compile(r"^revolut bank uab$"),
+            re.compile(r"^oranje spaarrekening$"),
+            re.compile(r"^ideal top-up$"),
+            re.compile(r"^apple pay top-up\s"),
+            re.compile(r"^moonpay$"),
+            re.compile(r"^interactive brokers ireland limited$"),
+            re.compile(r"^a lakatosh$"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class Apartment(Category):
@@ -322,10 +312,10 @@ class Apartment(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"Teilingen Residence B.V."),
-            re.compile(r"^Name: ING Hypotheken"),
+            re.compile(r"^ing hypotheken$"),
+            re.compile(r"^teilingen residence b\.v\.$"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 
 class Income(Category):
@@ -334,9 +324,9 @@ class Income(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"IMC TRADING BV"),
+            re.compile(r"^imc trading bv$"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 class Services(Category):
     def __init__(self):
@@ -344,55 +334,56 @@ class Services(Category):
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"Spotify"),
-            re.compile(r"OpenAI"),
-            re.compile(r"Audible"),
-            re.compile(r"Magticom"),
-            re.compile(r"Tilda"),
-            re.compile(r"ngrok\.com"),
-            re.compile(r"Shopify"),
-            re.compile(r"Google One"),
-            re.compile(r"^Apple$"),
-            re.compile(r"^YouTube$"),
-            re.compile(r"Azarova Consulting"),
+            re.compile(r"^azarova consulting$"),
+            re.compile(r"^openai$"),
+            re.compile(r"^apple$"),
+            re.compile(r"^tilda$"),
+            re.compile(r"^spotify$"),
+            re.compile(r"^shopify$"),
+            re.compile(r"^ngrok\.com$"),
+            re.compile(r"^google one$"),
+            re.compile(r"^audible$"),
+            re.compile(r"^youtube$"),
         ]
-        return any(p.search(transaction.description) for p in patterns)
+        return any(p.search(transaction.receiver) for p in patterns)
 
 class Others(Category):
     def __init__(self):
         super().__init__('Others')
 
     def is_matched(self, transaction: Transaction) -> bool:
-        patterns = [
-            re.compile(r"CCV\*Kroonenberg Groep"),
-            re.compile(r"NAME/Greenwheels\b"),
-            re.compile(r"\bDen Haag\b.*\bNR:55800440"),
-            ### Trip to prague
-            re.compile(r"infobus.eu"),
-            re.compile(r"^Dopravní podnik hlavního města Prahy - DPP$"),
-            re.compile(r"^Monastery Garden$"),
-            re.compile(r"^Albert$"),
-            re.compile(r"^Bubbletee$"),
-            re.compile(r"^U Červeného páva$"),
-            re.compile(r"^Praha Lodě$"),
-            re.compile(r"^Trdelnik Shop$"),
-            re.compile(r"^The Cozy Asian Kitche$"),
-            re.compile(r"^Restaurace Malostranská beseda$"),
-            re.compile(r"^Pražský hrad$"),
-            re.compile(r"NAME/Booking"),
-            re.compile(r"NAME/Booking"),
-            re.compile(r"/NAME/Hotel on Booking.com"),
-            ###
-            re.compile(r"^Transfer to Revolut user$"),
-            re.compile(r"SWIFT Transfer"),
-            re.compile(r"^To PETR PETROV$"),
-            re.compile(r"NAME/Immigratie en Naturalisatie Dienst"),
-            re.compile(r"Eye Wish Opticiens"),
-            re.compile(r"Tunity"),  # haircut
-            re.compile(r"PostNL"),  
-            re.compile(r"Amsterdam Zuid 4208-11"),  
-            re.compile(r"SHARED PACKAGING"),  
+        
+        match_args = [
+            (re.compile(r"^(ccv\*)?kroonenberg groep$"), None),
+            # Trip to Prague
+            (re.compile(r"^albert$"), (date(2025, 3, 8), date(2025, 3, 9))),
+            (re.compile(r"^infobus\.eu$"), None),   # tickets for my parents
+            # End of Prague trip 
+            (re.compile(r"^tunity$"), None),    # haircut
+            (re.compile(r"^transfer to revolut user$"), (date(2025,4,11), date(2025, 4,14))),
+            (re.compile(r"^shared packaging$"), (date(2025,1,15), date(2025,1,27))),
+            (re.compile(r"^postnl holding b.v.$"), date(2025,2,12)),
+            (re.compile(r"^booking$"), date(2025,3,6)),
+            (re.compile(r"^hotel on booking.com$"), date(2025,3,6)),
+            (re.compile(r"^parfenchikova via tikkie$"), date(2025,4,19)),
+            (re.compile(r"^aab inz tikkie$"), date(2025,4,30)),
+            (re.compile(r"^den haag cs$"), date(2025,1,16)),
+            (re.compile(r"^eye wish opticiens$"), date(2025,3,8)),
+            (re.compile(r"^maghnouji via tikkie$"), date(2025,3,21)),
+            (re.compile(r"^amsterdam zuid 4208-11$"), date(2025,4,22)),
+            (re.compile(r"^to petr petrov$"), date(2025,3,17)),
+            (re.compile(r"^swift transfer$"), date(2025,4,28)),
+            (re.compile(r"^dopravní podnik hlavního města prahy"), date(2025,3,7)),
+            (re.compile(r"^monastery garden$"), date(2025,3,7)),
+            (re.compile(r"^u červeného páva$"), date(2025,3,7)),
+            (re.compile(r"^bubbletee$"), date(2025,3,8)),
+            (re.compile(r"^praha lodě$"), date(2025,3,8)),
+            (re.compile(r"^trdelnik shop$"), date(2025,3,7)),
+            (re.compile(r"^the cozy asian kitche$"), date(2025,3,9)),
+            (re.compile(r"^restaurace malostranská beseda$"), date(2025,3,8)),
+            (re.compile(r"^pražský hrad$"), date(2025,3,9)),
+            (re.compile(r"^stolk via tikkie$"), date(2025,2,7)),
         ]
-        return any(p.search(transaction.description) for p in patterns) 
+        return any(match_receiver_and_date(p, d, transaction) for p, d in match_args) 
 
 

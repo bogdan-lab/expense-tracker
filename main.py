@@ -41,21 +41,18 @@ def main():
     
     logger.info(f"Number of transactions after duplicate dropping: {len(transactions)}")
 
-    # for tx in transactions:
-    #     logger.info(' '.join(str(getattr(tx, f)) for f in tx._fields if f != 'raw'))
+    grouped = GroupedTransactions(Groceries(), Transport(), 
+                                  HouseholdGoods(), Restaurants(), 
+                                  Gina(), Health(), Clothes(), 
+                                  Child(), Entertainment(), Taxes(),
+                                  VVE(), Bills(), Insurance(), Banks(),
+                                  InternalTransfers(), Services(), Apartment(), 
+                                  Income(), Documents(), Others())
+    ungrouped = grouped.add_transactions(transactions)
 
-    # grouped = GroupedTransactions(Groceries(), Transport(), 
-    #                               HouseholdGoods(), Restaurants(), 
-    #                               Gina(), Health(), Clothes(), 
-    #                               Child(), Entertainment(), Taxes(),
-    #                               VVE(), Bills(), Insurance(), Banks(),
-    #                               InternalTransfers(), Services(), Apartment(), 
-    #                               Income(), Documents(), Others())
-    # ungrouped = grouped.add_transactions(transactions)
-
-
-
-    # assert len(ungrouped) == 0
+    ungrouped_str = '\n'.join(('\t'.join((t.sender, t.receiver, str(t.date), str(t.amount))) for t in ungrouped))
+    logger.info(f"Number of ungrouped transactions: {len(ungrouped)}")
+    logger.error(f"List of ungrouped transactions: {ungrouped_str}")
 
     # visualizer = ExpenseVisualizer(grouped.get_categories())
 
