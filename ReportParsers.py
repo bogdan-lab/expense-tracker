@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 Transaction = namedtuple('Transaction', [
+    'sender_bank',
     'sender',
     'receiver',
     'currency',
@@ -32,7 +33,7 @@ def parse_filename(file_path: str) -> Tuple[str, str]:
     match = re.search(r'([^_/\\]+)_([^_/\\]+)_.+\.\w+$', filename)
     if not match:
         raise ValueError(f"Filename '{filename}' does not match expected format '<bank>_<owner>_<...>.ext'")
-    return '_'.join((match.group(1), match.group(2)))
+    return (match.group(1), match.group(2))
 
 
 
@@ -68,7 +69,7 @@ def parse_abn_amro_receiver(raw_description: str) -> str:
 
 def parse_abn_amro_transactions(filepath: str) -> List[Transaction]:
     transactions = []
-    sender = parse_filename(filepath)
+    bank, sender = parse_filename(filepath)
 
     with open(filepath, encoding='utf-8') as f:
         for line in f:
@@ -98,6 +99,7 @@ def parse_abn_amro_transactions(filepath: str) -> List[Transaction]:
                 continue
 
             transactions.append(Transaction(
+                sender_bank=bank,
                 sender=sender,
                 receiver=receiver,
                 currency=currency,
@@ -110,7 +112,7 @@ def parse_abn_amro_transactions(filepath: str) -> List[Transaction]:
 
 def parse_ing_transactions(file_path: str) -> List[Transaction]:
     transactions = []
-    sender = parse_filename(file_path)
+    bank, sender = parse_filename(file_path)
 
     with open(file_path, encoding="utf-8") as f:
         csv_delimiter = ';'
@@ -138,6 +140,7 @@ def parse_ing_transactions(file_path: str) -> List[Transaction]:
             description = row[8].strip()
 
             transactions.append(Transaction(
+                sender_bank=bank,
                 sender=sender,
                 receiver=row[1].strip(),
                 currency="EUR",
@@ -152,7 +155,7 @@ def parse_ing_transactions(file_path: str) -> List[Transaction]:
 
 def parse_revolut_transactions(file_path: str) -> List[Transaction]:
     transactions = []
-    sender = parse_filename(file_path)
+    bank, sender = parse_filename(file_path)
 
     with open(file_path, encoding="utf-8") as f:
         reader = csv.reader(f)
@@ -166,6 +169,7 @@ def parse_revolut_transactions(file_path: str) -> List[Transaction]:
                 raise ValueError(f"Invalid date format in Revolut row: {','.join(row)}")
 
             transactions.append(Transaction(
+                sender_bank=bank,
                 sender=sender,
                 receiver=row[4].strip(),
                 currency=row[7].strip(),

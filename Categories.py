@@ -297,8 +297,8 @@ class InternalTransfers(Category):
             re.compile(r"^revolut.*3740.*$"),
             re.compile(r"^revolut bank uab$"),
             re.compile(r"^oranje spaarrekening$"),
-            re.compile(r"^ideal top-up$"),
-            re.compile(r"^apple pay top-up\s"),
+            re.compile(r"^ideal top-up$"), # TODO amount should be positive to match
+            re.compile(r"^apple pay top-up\s"), # TODO amount should be positive
             re.compile(r"^moonpay$"),
             re.compile(r"^interactive brokers ireland limited$"),
             re.compile(r"^a lakatosh$"),
