@@ -1,6 +1,6 @@
 from collections import namedtuple
 from datetime import datetime, date
-from typing import List, Tuple
+from typing import List, Tuple, NamedTuple
 import re
 import csv
 import os
@@ -19,6 +19,27 @@ Transaction = namedtuple('Transaction', [
     'amount',
     'raw'
 ])
+
+class Transaction(NamedTuple):
+    sender_bank: str
+    sender: str
+    receiver: str
+    currency: str
+    date: date
+    amount: float
+    raw: str   
+
+    @classmethod
+    def from_strings(cls, values: List[str]) -> 'Transaction':
+        return cls(
+            values[0],
+            values[1],
+            values[2],
+            values[3],
+            datetime.strptime(values[4], "%Y-%m-%d").date(),
+            float(values[5]),
+            values[6],
+        )
 
 def parse_float(value: str) -> float:
     return float(value.replace(',', '.'))

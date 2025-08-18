@@ -35,6 +35,7 @@ class Category(ABC):
         return self._total
 
     def get_transactions(self) -> List[Transaction]:
+        self._transactions.sort()
         return self._transactions
 
     @abstractmethod

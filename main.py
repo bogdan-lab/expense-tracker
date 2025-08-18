@@ -1,15 +1,8 @@
 import argparse
 from ReportParsers import Transaction
 from TransactionTransformers import lowercase_str_fields, drop_duplicates
-from Categories import (
-    Groceries, Transport, HouseholdGoods, Restaurants, 
-    Gina, Health, Clothes, Child, Entertainment, Taxes, 
-    VVE, Bills, Insurance, Banks, InternalTransfers,
-    Services, Apartment, Income, Documents, Others
-)
 from GroupedTransactions import GroupedTransactions
 from ReportAggregator import ReportAggregator
-from collections import defaultdict
 from ExpenseVisualizer import ExpenseVisualizer
 import logging
 
@@ -41,24 +34,17 @@ def main():
     
     logger.info(f"Number of transactions after duplicate dropping: {len(transactions)}")
 
-    grouped = GroupedTransactions(Groceries(), Transport(), 
-                                  HouseholdGoods(), Restaurants(), 
-                                  Gina(), Health(), Clothes(), 
-                                  Child(), Entertainment(), Taxes(),
-                                  VVE(), Bills(), Insurance(), Banks(),
-                                  InternalTransfers(), Services(), Apartment(), 
-                                  Income(), Documents(), Others())
+    grouped = GroupedTransactions()
     ungrouped = grouped.add_transactions(transactions)
 
     ungrouped_str = '\n'.join(('\t'.join((t.sender, t.receiver, str(t.date), str(t.amount))) for t in ungrouped))
     logger.info(f"Number of ungrouped transactions: {len(ungrouped)}")
-    logger.error(f"List of ungrouped transactions: {ungrouped_str}")
+    if len(ungrouped) > 0:
+        logger.error(f"List of ungrouped transactions: {ungrouped_str}")
 
     # visualizer = ExpenseVisualizer(grouped.get_categories())
 
     # visualizer.plot_combined_summary(min_percentage=2.0)
-
-
 
 
 if __name__ == "__main__":
