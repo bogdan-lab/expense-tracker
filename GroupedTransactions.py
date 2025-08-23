@@ -101,7 +101,7 @@ class GroupedTransactions:
             tx_count += 1
         logger.info(f"Deserialized {tx_count} transactions")
         filled_cats = [cat for cat in cat_map.categories() if len(cat.get_transactions()) > 0]
-        logger.info(f"Found the following categories {list(c.get_name() for c in filled_cats)}")
+        logger.debug(f"Found the following categories {list(c.get_name() for c in filled_cats)}")
         return cls(*cat_map.categories())
 
     @staticmethod
