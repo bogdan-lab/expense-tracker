@@ -3,7 +3,12 @@ from ReportParsers import Transaction
 import re
 from datetime import date
 from typing import List, Tuple, Union
+from enum import Enum
 
+class FlowDirection(Enum):
+    EARNINGS = "earnings"
+    EXPENSES = "expenses"
+    NEUTRAL = "neutral"
 
 def match_receiver_and_date(pattern: re.Pattern, match_date:Union[date, Tuple[date]], transaction: Transaction)-> bool:
     result = pattern.search(transaction.receiver) 
@@ -41,6 +46,10 @@ class Category(ABC):
     @abstractmethod
     def is_matched(self, transaction: Transaction) -> bool:
         pass
+    
+    @abstractmethod
+    def get_flow_direction(self) -> FlowDirection:
+        pass
 
 
 class Groceries(Category):
@@ -56,6 +65,9 @@ class Groceries(Category):
             re.compile(r"^smak$"),
         ]
         return any(p.search(transaction.receiver) for p in patterns)
+    
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 
 class Transport(Category):
@@ -71,6 +83,8 @@ class Transport(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Insurance(Category):
     def __init__(self):
@@ -84,6 +98,8 @@ class Insurance(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class HouseholdGoods(Category):
     def __init__(self):
@@ -110,6 +126,8 @@ class HouseholdGoods(Category):
         ]
         return any(match_receiver_and_date(p, d, transaction) for p, d in match_args)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Restaurants(Category):
     def __init__(self):
@@ -144,6 +162,8 @@ class Restaurants(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Gina(Category):
     def __init__(self):
@@ -158,6 +178,8 @@ class Gina(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Health(Category):
     def __init__(self):
@@ -176,6 +198,8 @@ class Health(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Clothes(Category):
     def __init__(self):
@@ -193,6 +217,8 @@ class Clothes(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Child(Category):
     def __init__(self):
@@ -210,6 +236,8 @@ class Child(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Entertainment(Category):
     def __init__(self):
@@ -218,6 +246,8 @@ class Entertainment(Category):
     def is_matched(self, transaction: Transaction) -> bool:
         return False
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Taxes(Category):
     def __init__(self):
@@ -230,6 +260,9 @@ class Taxes(Category):
             re.compile(r"belasting"),
         ]
         return any(p.search(transaction.receiver) for p in patterns)
+
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Documents(Category):
     def __init__(self):
@@ -244,6 +277,9 @@ class Documents(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
+
 class VVE(Category):
     def __init__(self):
         super().__init__('VVE')
@@ -255,6 +291,8 @@ class VVE(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Bills(Category):
     def __init__(self):
@@ -270,6 +308,8 @@ class Bills(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Banks(Category):
     def __init__(self):
@@ -282,6 +322,9 @@ class Banks(Category):
             re.compile(r"^kosten oranjepakket$"),
         ]
         return any(p.search(transaction.receiver) for p in patterns)
+
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class InternalTransfers(Category):
     def __init__(self):
@@ -306,6 +349,8 @@ class InternalTransfers(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.NEUTRAL
 
 class Apartment(Category):
     def __init__(self):
@@ -318,6 +363,8 @@ class Apartment(Category):
         ]
         return any(p.search(transaction.receiver) for p in patterns)
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Income(Category):
     def __init__(self):
@@ -328,6 +375,9 @@ class Income(Category):
             re.compile(r"^imc trading bv$"),
         ]
         return any(p.search(transaction.receiver) for p in patterns)
+
+    def get_flow_direction(self):
+        return FlowDirection.EARNINGS
 
 class Services(Category):
     def __init__(self):
@@ -347,6 +397,9 @@ class Services(Category):
             re.compile(r"^youtube$"),
         ]
         return any(p.search(transaction.receiver) for p in patterns)
+
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 
 class Others(Category):
     def __init__(self):
@@ -387,4 +440,6 @@ class Others(Category):
         ]
         return any(match_receiver_and_date(p, d, transaction) for p, d in match_args) 
 
+    def get_flow_direction(self):
+        return FlowDirection.EXPENSES
 

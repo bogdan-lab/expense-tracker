@@ -55,9 +55,8 @@ def main():
     else:
         CsvCategoriesValidator().save(grouped=grouped, path=GROUPED_CATEGORIES_CSV_PATH, delimiter=DEFAULT_CSV_DELIMITER)
 
-    # visualizer = ExpenseVisualizer(grouped.get_categories())
-
-    # visualizer.plot_combined_summary(min_percentage=2.0)
+    visualizer = ExpenseVisualizer(grouped.get_categories())
+    visualizer.plot_combined_summary(min_percentage=2.0)
 
 
 if __name__ == "__main__":

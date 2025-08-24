@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 from typing import List, Dict
 from collections import defaultdict
-from Categories import Category
+from Categories import Category, FlowDirection
 import logging
 
 
@@ -22,15 +22,22 @@ class ExpenseVisualizer:
             name = category.get_name()
             txs = category.get_transactions()
             logger.debug(f"Processing {len(txs)} transactions for category: {name}")
+            monthly_data = None
+            flow_direction = category.get_flow_direction()
+            if flow_direction == FlowDirection.NEUTRAL:
+                skipped += len(txs)
+                monthly_data = None
+                continue
+            elif flow_direction == FlowDirection.EARNINGS:
+                monthly_data = self.earnings_monthly_data[name]
+            elif flow_direction == FlowDirection.EXPENSES:
+                monthly_data = self.expense_monthly_data[name]
+            else:
+                raise ValueError(f"Unknown flow_direction {flow_direction}")
+                    
             for tx in txs:
                 month = tx.date.strftime("%Y-%m")
-                if name == "InternalTransfers":
-                    skipped += 1
-                    continue
-                elif name == "Income":
-                    self.earnings_monthly_data[name][month] += tx.amount
-                else:
-                    self.expense_monthly_data[name][month] += tx.amount
+                monthly_data[month] += tx.amount
         logger.info(f"Skipped {skipped} category(ies) named 'InternalTransfers'")
 
     def _filter_categories_by_threshold(self, min_percentage: float) -> Dict[str, Dict[str, float]]:
