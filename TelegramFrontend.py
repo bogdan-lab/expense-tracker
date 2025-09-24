@@ -11,6 +11,10 @@ from telegram.ext import (
     filters,
 )
 from typing import Optional
+from ExpenseVisualizer import plot_statistics
+import matplotlib.pyplot as plt
+from GroupedTransactions import load_grouped_transactions_from_dbase
+from Constants import DEFAULT_CSV_DELIMITER, GROUPED_CATEGORIES_CSV_PATH
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -58,16 +62,16 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         )
         return
 
-    logger.info(
-        "---- Received file ----\n"
-        f"From: @{update.effective_user.username or update.effective_user.id}\n"
-        f"Name: {doc.file_name}\n"
-        f"MIME: {doc.mime_type}\n"
-        f"Size: {doc.file_size} bytes\n"
-        "----- File content start -----\n"
-        f"{text}\n"
-        "----- File content end -------"
-    )
+    img_buf = BytesIO()
+    fig = plot_statistics(load_grouped_transactions_from_dbase(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER))
+    fig.savefig(img_buf, format="png")
+    plt.close(fig)
+    img_buf.seek(0)
+    
+    await update.message.reply_photo(
+        photo=img_buf,
+        caption="Here is your matplotlib report."
+        )
 
     await update.message.reply_text(
         f"Got it: {doc.file_name} ({doc.file_size} bytes). Printed to console ✅"

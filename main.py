@@ -4,8 +4,10 @@ from TransactionTransformers import lowercase_str_fields, drop_duplicates
 from GroupedTransactions import GroupedTransactions
 from ReportAggregator import ReportAggregator
 from CategoriesWriter import CsvCategoriesSaver, CsvCategoriesValidator
-from ExpenseVisualizer import ExpenseVisualizer
+from ExpenseVisualizer import plot_statistics
 import logging
+import matplotlib.pyplot as plt
+from Constants import DEFAULT_CSV_DELIMITER, GROUPED_CATEGORIES_CSV_PATH
 
 
 logging.basicConfig(
@@ -15,8 +17,6 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-GROUPED_CATEGORIES_CSV_PATH = "grouped_categories.csv"
-DEFAULT_CSV_DELIMITER = "|"
 
 def main():
     parser = argparse.ArgumentParser(description="Process bank transaction file and group by category.")
@@ -55,8 +55,8 @@ def main():
     else:
         CsvCategoriesValidator().save(grouped=grouped, path=GROUPED_CATEGORIES_CSV_PATH, delimiter=DEFAULT_CSV_DELIMITER)
 
-    visualizer = ExpenseVisualizer(grouped.get_categories())
-    visualizer.plot_combined_summary(min_percentage=2.0)
+    plot_statistics(grouped)
+    plt.show()
 
 
 if __name__ == "__main__":

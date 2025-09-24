@@ -121,3 +121,8 @@ class GroupedTransactions:
             except TypeError:
                 pass
         return concrete
+
+
+def load_grouped_transactions_from_dbase(db_path: str, delimiter: str) -> GroupedTransactions:
+    with open(db_path, mode="r", encoding="utf-8") as f:
+        return GroupedTransactions.deserialize(f.read(), delimiter=delimiter)

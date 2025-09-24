@@ -2,7 +2,9 @@ import matplotlib.pyplot as plt
 from typing import List, Dict
 from collections import defaultdict
 from Categories import Category, FlowDirection
+from GroupedTransactions import GroupedTransactions
 import logging
+from matplotlib.figure import Figure
 
 
 logger = logging.getLogger(__name__)
@@ -146,10 +148,16 @@ class ExpenseVisualizer:
             plt.tight_layout()
             plt.show()
 
-    def plot_combined_summary(self, min_percentage: float = 1.0):
+    def plot_combined_summary(self, min_percentage: float = 1.0) -> Figure:
         logger.info("Generating combined summary plot...")
         fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), height_ratios=[1, 2])
         self.plot_monthly_totals(ax=ax1)
         self.plot_monthly_expenses(min_percentage=min_percentage, ax=ax2)
         plt.tight_layout()
-        plt.show()
+        return fig
+
+
+def plot_statistics(gt: GroupedTransactions) -> Figure:
+    visualizer = ExpenseVisualizer(gt.get_categories())
+    return visualizer.plot_combined_summary(min_percentage=2.0)
+    
