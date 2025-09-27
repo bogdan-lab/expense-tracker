@@ -1,7 +1,7 @@
 import argparse
-from ReportParsers import Transaction
+from ReportParsers import Transaction, Bank, report_to_transactions
 from TransactionTransformers import lowercase_str_fields, drop_duplicates
-from GroupedTransactions import GroupedTransactions
+from GroupedTransactions import GroupedTransactions, load_grouped_transactions_from_dbase
 from ReportAggregator import ReportAggregator
 from CategoriesWriter import CsvCategoriesSaver, CsvCategoriesValidator
 from ExpenseVisualizer import plot_statistics
@@ -11,11 +11,30 @@ from Constants import DEFAULT_CSV_DELIMITER, GROUPED_CATEGORIES_CSV_PATH
 
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",
 )
 
 logger = logging.getLogger(__name__)
+
+
+def update_database(db_path: str, db_delimiter: str, report: str, bank: Bank, sender: str) -> None:
+    transactions: list[Transaction] = report_to_transactions(report, bank, sender)
+
+    logger.info(f"Initial number of transactions: {len(transactions)}")
+
+    transactions = lowercase_str_fields(transactions)
+
+    grouped = load_grouped_transactions_from_dbase(db_path, db_delimiter)
+
+    ungrouped = grouped.add_transactions(transactions)
+
+    ungrouped_str = '\n'.join(('\t'.join((t.sender, t.receiver, str(t.date), str(t.amount))) for t in ungrouped))
+    logger.info(f"Number of ungrouped transactions: {len(ungrouped)}")
+    if len(ungrouped) > 0:
+        logger.error(f"List of ungrouped transactions: {ungrouped_str}")
+
+    CsvCategoriesSaver().save(grouped=grouped, path=db_path, delimiter=db_delimiter)
 
 
 def main():

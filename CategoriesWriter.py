@@ -45,6 +45,6 @@ class CsvCategoriesValidator(CategoriesSaver):
             e_tx = e_cat.get_transactions()
             a_tx = a_cat.get_transactions()
             if e_tx != a_tx:
-                raise ValueError(f"Transaction mismatch in category '{e_cat.get_name()}'")
+                raise ValueError(f"Transaction mismatch in category '{e_tx}' != '{a_tx}'")
 
         logger.info(f"Validation passed: contents in {path} match current grouped transactions")

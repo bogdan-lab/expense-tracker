@@ -4,6 +4,7 @@ import re
 from datetime import date
 from typing import List, Tuple, Union
 from enum import Enum
+from TransactionTransformers import is_new_transaction
 
 class FlowDirection(Enum):
     EARNINGS = "earnings"
@@ -33,8 +34,9 @@ class Category(ABC):
         return self._name
 
     def add_transaction(self, transaction: Transaction) -> None:
-        self._transactions.append(transaction)
-        self._total += transaction.amount
+        if is_new_transaction(self._transactions, transaction):
+            self._transactions.append(transaction)
+            self._total += transaction.amount
 
     def get_total(self) -> float:
         return self._total
