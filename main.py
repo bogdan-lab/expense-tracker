@@ -8,6 +8,7 @@ from ExpenseVisualizer import plot_statistics
 import logging
 import matplotlib.pyplot as plt
 from Constants import DEFAULT_CSV_DELIMITER, GROUPED_CATEGORIES_CSV_PATH
+from io import StringIO
 
 
 logging.basicConfig(
@@ -18,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def update_database(db_path: str, db_delimiter: str, report: str, bank: Bank, sender: str) -> None:
+def update_database(db_path: str, db_delimiter: str, report: StringIO, bank: Bank, sender: str) -> None:
     transactions: list[Transaction] = report_to_transactions(report, bank, sender)
 
     logger.info(f"Number of transactions: {len(transactions)}")

@@ -21,16 +21,6 @@ class Bank(Enum):
             raise RuntimeError(f"Try to compare Bank with {type(other)}")
         return self.value < other.value
 
-# Transaction = namedtuple('Transaction', [
-#     'sender_bank',
-#     'sender',
-#     'receiver',
-#     'currency',
-#     'date',
-#     'amount',
-#     'raw'
-# ])
-
 @dataclass(frozen=True)
 class Transaction:
     sender_bank: str
@@ -107,10 +97,9 @@ def parse_abn_amro_receiver(raw_description: str) -> str:
 
     raise ValueError(f"Unrecognized receiver format: {raw_description}")
 
-def abn_amro_report_to_transactions(report: str, sender: str) -> List[Transaction]:
+def abn_amro_report_to_transactions(report: StringIO, sender: str) -> List[Transaction]:
     transactions = []
-    lines = StringIO(report)
-    for line in lines:
+    for line in report:
         raw = line.strip()
         parts = raw.split('\t')
         
@@ -154,11 +143,11 @@ def parse_abn_amro_transactions(filepath: str) -> List[Transaction]:
     with open(filepath, encoding='utf-8') as f:
         return abn_amro_report_to_transactions(f.read(), sender)
 
-def ing_report_to_transactions(report: str, sender: str) -> List[Transaction]:
+def ing_report_to_transactions(report: StringIO, sender: str) -> List[Transaction]:
     transactions = []
 
     csv_delimiter = ';'
-    reader = csv.reader(StringIO(report), delimiter=csv_delimiter)
+    reader = csv.reader(report, delimiter=csv_delimiter)
     headers = next(reader)
 
     if "EUR" not in headers[6]:
@@ -198,9 +187,9 @@ def parse_ing_transactions(file_path: str) -> List[Transaction]:
         return ing_report_to_transactions(f.read(), sender)
 
 
-def revolut_report_to_transactions(report: str, sender: str) -> List[Transaction]:
+def revolut_report_to_transactions(report: StringIO, sender: str) -> List[Transaction]:
     transactions = []
-    reader = csv.reader(StringIO(report))
+    reader = csv.reader(report)
     header = next(reader)
 
     for row in reader:
@@ -229,7 +218,7 @@ def parse_revolut_transactions(file_path: str) -> List[Transaction]:
     with open(file_path, encoding="utf-8") as f:
         return revolut_report_to_transactions(f.read(), sender)
 
-def report_to_transactions(report: str, bank: Bank, sender: str) -> List[Transaction]:
+def report_to_transactions(report: StringIO, bank: Bank, sender: str) -> List[Transaction]:
     if bank == Bank.ABN_AMRO:
         return abn_amro_report_to_transactions(report, sender)
     elif bank == Bank.ING:
