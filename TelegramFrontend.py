@@ -1,20 +1,21 @@
 import os
 import logging
-from io import BytesIO
+from io import BytesIO, StringIO
 
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
+    CallbackQueryHandler,
     ContextTypes,
     filters,
 )
 from typing import Optional
-from ExpenseVisualizer import plot_statistics
+from main import plot_current_db_statistics, update_database
 import matplotlib.pyplot as plt
-from GroupedTransactions import load_grouped_transactions_from_dbase
 from Constants import DEFAULT_CSV_DELIMITER, GROUPED_CATEGORIES_CSV_PATH
+from ReportParsers import Bank
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -36,6 +37,30 @@ def _is_supported_text_file(file_name: str, mime: Optional[str]) -> bool:
     return name_ok and mime_ok
 
 
+async def report_current_db_statistics(update: Update) -> None:
+    img_buf = BytesIO()
+    fig = plot_current_db_statistics(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER)
+    fig.savefig(img_buf, format="png")
+    plt.close(fig)
+    img_buf.seek(0)
+    
+    await update.message.reply_photo(
+        photo=img_buf,
+        caption="Here is your matplotlib report."
+        )
+
+
+def _bank_keyboard() -> InlineKeyboardMarkup:
+    prefix = lambda x: "bank:" + x
+    buttons = [
+        [
+            InlineKeyboardButton(text="ABN AMRO", callback_data=prefix(Bank.ABN_AMRO.value)),
+            InlineKeyboardButton(text="ING", callback_data=prefix(Bank.ING.value)),
+            InlineKeyboardButton(text="Revolut", callback_data=prefix(Bank.REVOLUT.value)),
+        ]
+    ]
+    return InlineKeyboardMarkup(buttons)
+
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.document:
         return
@@ -49,35 +74,49 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     tg_file = await doc.get_file()
-    buffer = BytesIO()
-    await tg_file.download_to_memory(out=buffer)
-    buffer.seek(0)
-    raw = buffer.read()
-
+    raw_bytes = await tg_file.download_as_bytearray()
     try:
-        text = raw.decode("utf-8", errors="strict")
+        report = StringIO(raw_bytes.decode("utf-8", errors="strict"))
     except UnicodeDecodeError:
-        await update.message.reply_text(
-            "Encoding error. Please send the file encoded as UTF-8."
-        )
+        await update.message.reply_text("Encoding error. Please send the file encoded as UTF-8.")
         return
 
-    img_buf = BytesIO()
-    fig = plot_statistics(load_grouped_transactions_from_dbase(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER))
-    fig.savefig(img_buf, format="png")
-    plt.close(fig)
-    img_buf.seek(0)
+    context.user_data["pending_report"] = report
+    await update.message.reply_text("Which bank is this statement from?", reply_markup=_bank_keyboard())
     
-    await update.message.reply_photo(
-        photo=img_buf,
-        caption="Here is your matplotlib report."
-        )
+    
+async def on_bank_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    if not query or not query.data or not query.data.startswith("bank:"):
+        return
 
-    await update.message.reply_text(
-        f"Got it: {doc.file_name} ({doc.file_size} bytes). Printed to console ✅"
-    )
+    await query.answer()  # acknowledge button press
 
+    bank_name = query.data.split(":", 1)[1]
+    try:
+        bank = Bank(bank_name)
+    except KeyError:
+        await query.message.reply_text("Unknown bank choice. Please resend the file.")
+        context.user_data.pop("pending_report", None)
+        return
 
+    logger.info(f"Selected bank {bank}")
+
+    report = context.user_data.pop("pending_report", None)
+    if report is None:
+        await query.message.reply_text("No pending file found. Please resend the document.")
+        return
+    
+    sender = str(update.effective_user.first_name)
+
+    logger.info(f"Sender: {sender}")
+    
+    update_database(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER, report, bank, sender)
+    await report_current_db_statistics(update)
+       
+    
+    
+    
 def main() -> None:
     token = os.environ.get("EXPENSE_TRACKER_TELEGRAM_BOT_TOKEN")
     if not token:
@@ -86,6 +125,7 @@ def main() -> None:
     app = Application.builder().token(token).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
+    app.add_handler(CallbackQueryHandler(on_bank_chosen, pattern=r"^bank:"))
 
     logger.info("Bot starting with polling...")
     app.run_polling(close_loop=False)

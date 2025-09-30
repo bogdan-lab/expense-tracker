@@ -69,7 +69,7 @@ class GroupedTransactions:
             for tx in cat.get_transactions():
                 writer.writerow([
                     cat_name,
-                ] + list(tx))
+                ] + [tx.sender_bank.value, tx.sender, tx.receiver, tx.currency, tx.date, tx.amount, tx.raw])
                 row_count+=1
         logger.info(f"serialized {row_count} grouped transactions")
         return buf.getvalue()

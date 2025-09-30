@@ -21,9 +21,9 @@ class Bank(Enum):
             raise RuntimeError(f"Try to compare Bank with {type(other)}")
         return self.value < other.value
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, order=True)
 class Transaction:
-    sender_bank: str
+    sender_bank: Bank
     sender: str
     receiver: str
     currency: str
@@ -32,11 +32,9 @@ class Transaction:
     raw: str
 
     def __post_init__(self):
-        object.__setattr__(self, "sender_bank", self.sender_bank.lower())
         object.__setattr__(self, "sender", self.sender.lower())
         object.__setattr__(self, "receiver", self.receiver.lower())
         object.__setattr__(self, "currency", self.currency.lower())
-        object.__setattr__(self, "raw", self.raw.lower()) 
 
     @classmethod
     def from_strings(cls, values: List[str]) -> 'Transaction':
@@ -137,12 +135,6 @@ def abn_amro_report_to_transactions(report: StringIO, sender: str) -> List[Trans
 
     return transactions
 
-
-def parse_abn_amro_transactions(filepath: str) -> List[Transaction]:
-    _, sender = parse_filename(filepath)
-    with open(filepath, encoding='utf-8') as f:
-        return abn_amro_report_to_transactions(f.read(), sender)
-
 def ing_report_to_transactions(report: StringIO, sender: str) -> List[Transaction]:
     transactions = []
 
@@ -180,13 +172,6 @@ def ing_report_to_transactions(report: StringIO, sender: str) -> List[Transactio
 
     return transactions
 
-
-def parse_ing_transactions(file_path: str) -> List[Transaction]:
-    _, sender = parse_filename(file_path)
-    with open(file_path, encoding="utf-8") as f:
-        return ing_report_to_transactions(f.read(), sender)
-
-
 def revolut_report_to_transactions(report: StringIO, sender: str) -> List[Transaction]:
     transactions = []
     reader = csv.reader(report)
@@ -211,13 +196,6 @@ def revolut_report_to_transactions(report: StringIO, sender: str) -> List[Transa
 
     return transactions
 
-
-def parse_revolut_transactions(file_path: str) -> List[Transaction]:
-    _, sender = parse_filename(file_path)
-
-    with open(file_path, encoding="utf-8") as f:
-        return revolut_report_to_transactions(f.read(), sender)
-
 def report_to_transactions(report: StringIO, bank: Bank, sender: str) -> List[Transaction]:
     if bank == Bank.ABN_AMRO:
         return abn_amro_report_to_transactions(report, sender)
@@ -227,3 +205,11 @@ def report_to_transactions(report: StringIO, bank: Bank, sender: str) -> List[Tr
         return revolut_report_to_transactions(report, sender)
     else:
         raise ValueError(f"Unknown bank: {bank}")
+
+
+def transactions_from_file(file_path: str) -> List[Transaction]:
+    assert os.path.isfile(file_path)
+    filename = os.path.basename(file_path)
+    bank, sender = parse_filename(filename)
+    with open(file_path, 'r', encoding="utf-8") as fin:
+        return report_to_transactions(StringIO(fin.read()), bank, sender)
