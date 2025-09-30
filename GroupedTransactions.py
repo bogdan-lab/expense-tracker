@@ -6,6 +6,7 @@ from typing import List, Dict, Type
 from Categories import Category
 from ReportParsers import Transaction
 import logging
+from dataclasses import fields
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +14,7 @@ class GroupedTransactions:
 
     CSV_HEADERS = [
         "category",
-    ] + list(Transaction._fields)
+    ] + list(f.name for f in fields(Transaction))
     
     class _CategoryMap:
         def __init__(self):

@@ -1,6 +1,6 @@
 import argparse
 from ReportParsers import Transaction, Bank, report_to_transactions
-from TransactionTransformers import lowercase_str_fields, drop_duplicates
+from TransactionTransformers import drop_duplicates
 from GroupedTransactions import GroupedTransactions, load_grouped_transactions_from_dbase
 from ReportAggregator import ReportAggregator
 from CategoriesWriter import CsvCategoriesSaver, CsvCategoriesValidator
@@ -21,9 +21,7 @@ logger = logging.getLogger(__name__)
 def update_database(db_path: str, db_delimiter: str, report: str, bank: Bank, sender: str) -> None:
     transactions: list[Transaction] = report_to_transactions(report, bank, sender)
 
-    logger.info(f"Initial number of transactions: {len(transactions)}")
-
-    transactions = lowercase_str_fields(transactions)
+    logger.info(f"Number of transactions: {len(transactions)}")
 
     grouped = load_grouped_transactions_from_dbase(db_path, db_delimiter)
 
@@ -54,12 +52,7 @@ def main():
         reports.get_revolut_transactions()
     )
 
-    logger.info(f"Initial number of transactions: {len(transactions)}")
-
-    transactions = lowercase_str_fields(transactions)
-    transactions = drop_duplicates(transactions)
-    
-    logger.info(f"Number of transactions after duplicate dropping: {len(transactions)}")
+    logger.info(f"Number of transactions: {len(transactions)}")
 
     grouped = GroupedTransactions()
     ungrouped = grouped.add_transactions(transactions)

@@ -7,6 +7,7 @@ import os
 import logging
 from enum import Enum
 from io import StringIO
+from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
 
@@ -20,24 +21,32 @@ class Bank(Enum):
             raise RuntimeError(f"Try to compare Bank with {type(other)}")
         return self.value < other.value
 
-Transaction = namedtuple('Transaction', [
-    'sender_bank',
-    'sender',
-    'receiver',
-    'currency',
-    'date',
-    'amount',
-    'raw'
-])
+# Transaction = namedtuple('Transaction', [
+#     'sender_bank',
+#     'sender',
+#     'receiver',
+#     'currency',
+#     'date',
+#     'amount',
+#     'raw'
+# ])
 
-class Transaction(NamedTuple):
+@dataclass(frozen=True)
+class Transaction:
     sender_bank: str
     sender: str
     receiver: str
     currency: str
     date: date
     amount: float
-    raw: str   
+    raw: str
+
+    def __post_init__(self):
+        object.__setattr__(self, "sender_bank", self.sender_bank.lower())
+        object.__setattr__(self, "sender", self.sender.lower())
+        object.__setattr__(self, "receiver", self.receiver.lower())
+        object.__setattr__(self, "currency", self.currency.lower())
+        object.__setattr__(self, "raw", self.raw.lower()) 
 
     @classmethod
     def from_strings(cls, values: List[str]) -> 'Transaction':
