@@ -37,19 +37,17 @@ def _is_supported_text_file(file_name: str, mime: Optional[str]) -> bool:
     return name_ok and mime_ok
 
 
-async def report_current_db_statistics(update: Update) -> None:
+async def report_current_db_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     img_buf = BytesIO()
     fig = plot_current_db_statistics(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER)
     fig.savefig(img_buf, format="png")
     plt.close(fig)
     img_buf.seek(0)
     
-    await update.message.reply_photo(
-        photo=img_buf,
-        caption="Here is your matplotlib report."
-        )
-
-
+    await context.bot.send_photo(
+    chat_id=update.effective_chat.id,
+    photo=img_buf)
+    
 def _bank_keyboard() -> InlineKeyboardMarkup:
     prefix = lambda x: "bank:" + x
     buttons = [
@@ -112,7 +110,7 @@ async def on_bank_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     logger.info(f"Sender: {sender}")
     
     update_database(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER, report, bank, sender)
-    await report_current_db_statistics(update)
+    await report_current_db_statistics(update, context)
        
     
     
