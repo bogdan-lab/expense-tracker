@@ -45,6 +45,10 @@ class Category(ABC):
         self._transactions.sort()
         return self._transactions
 
+    def clear(self) -> None:
+        self._transactions.clear()
+        self._total = 0.0
+
     @abstractmethod
     def is_matched(self, transaction: Transaction) -> bool:
         pass

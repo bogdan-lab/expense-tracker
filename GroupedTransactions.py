@@ -1,7 +1,7 @@
 from __future__ import annotations
 import csv
 import io
-from typing import List, Dict, Type
+from typing import List, Dict, Type, Optional
 
 from Categories import Category
 from ReportParsers import Transaction
@@ -63,6 +63,23 @@ class GroupedTransactions:
     
     def get_categories(self) -> List[Category]:
         return self._categories
+    
+    def get_category(self, cat_type: Type[Category]) -> Category:
+        for cat in self._categories:
+            if isinstance(cat, cat_type):
+                return cat
+        raise KeyError(f"Category of type {cat_type.__name__} not found")
+    
+    def format_category_counts(self) -> str:
+        cats = self.get_categories()
+        name_w = max((len(c.get_name()) for c in cats), default=0)
+        cnt_w = max((len(str(len(c.get_transactions()))) for c in cats), default=1)
+        lines = [
+            f"{c.get_name():<{name_w}}:\t{len(c.get_transactions()):>{cnt_w}}"
+            for c in cats
+        ]
+        return "\n".join(lines)
+
     
     def serialize(self, delimiter: str = ",") -> str:
         buf = io.StringIO()
@@ -133,3 +150,16 @@ class GroupedTransactions:
 def load_grouped_transactions_from_dbase(db_path: str, delimiter: str) -> GroupedTransactions:
     with open(db_path, mode="r", encoding="utf-8") as f:
         return GroupedTransactions.deserialize(f.read(), delimiter=delimiter)
+
+def compare_categories(actual: GroupedTransactions, expected: GroupedTransactions) -> Optional[str]:
+    actual_c = actual.get_categories()
+    expected_c = expected.get_categories()
+    if len(actual_c) != len(expected_c):
+        return f"Mismatch of category number actual: {len(actual_c)}; expected: {len(expected_c)}"
+    for e_cat, a_cat in zip(expected_c, actual_c):
+        if e_cat.get_name() != a_cat.get_name():
+            return f"Category mismatch: expected '{e_cat.get_name()}', got '{a_cat.get_name()}'"
+        e_tx = e_cat.get_transactions()
+        a_tx = a_cat.get_transactions()
+        if e_tx != a_tx:
+            return f"Transaction mismatch in category '{e_tx}' != '{a_tx}'"

@@ -24,27 +24,3 @@ class CsvCategoriesSaver(CategoriesSaver):
             f.write(csv_text)
         logger.info(f"Wrote grouped transactions to {path}")
 
-
-class CsvCategoriesValidator(CategoriesSaver):
-    def save(self, grouped: GroupedTransactions, path: str, delimiter: str) -> None:
-        if not os.path.exists(path):
-            raise ValueError(f"File {path} does not exist. Cannot validate!")
-
-        with open(path, mode="r", encoding="utf-8") as f:
-            stored_text = f.read()
-
-        loaded = GroupedTransactions.deserialize(stored_text, delimiter=delimiter)
-        expected = grouped.get_categories()
-        actual = loaded.get_categories()
-
-        if len(actual) != len(expected):
-            raise ValueError(f"Mismatch of category number actual: {len(actual)}; expected: {len(expected)}")
-        for e_cat, a_cat in zip(expected, actual):
-            if e_cat.get_name() != a_cat.get_name():
-                raise ValueError(f"Category mismatch: expected '{e_cat.get_name()}', got '{a_cat.get_name()}'")
-            e_tx = e_cat.get_transactions()
-            a_tx = a_cat.get_transactions()
-            if e_tx != a_tx:
-                raise ValueError(f"Transaction mismatch in category '{e_tx}' != '{a_tx}'")
-
-        logger.info(f"Validation passed: contents in {path} match current grouped transactions")
