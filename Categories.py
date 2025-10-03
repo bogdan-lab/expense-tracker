@@ -445,3 +445,12 @@ class Others(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+class Ungrouped(Category):
+    def __init__(self):
+        super().__init__('Ungrouped')
+
+    def is_matched(self, transaction: Transaction) -> bool:
+        raise RuntimeError("Ungrouped should not be matched via is_matched; add transactions explicitly.")
+
+    def get_flow_direction(self) -> FlowDirection:
+        return FlowDirection.EXPENSES

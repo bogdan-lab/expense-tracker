@@ -42,19 +42,25 @@ class GroupedTransactions:
         cat_map.fill(categories)
         self._categories: List[Category] = cat_map.categories()
 
-    def add_transactions(self, transactions: List[Transaction]) -> List[Transaction]:
-        ungrouped = []
+    def add_transactions(self, transactions: List[Transaction]) -> None:
+        # Find (or require) the Ungrouped category
+        ungrouped_cat = next((c for c in self._categories if c.get_name() == "Ungrouped"), None)
+        if ungrouped_cat is None:
+            raise RuntimeError("Ungrouped category must be present in GroupedTransactions.")
+
         for tx in transactions:
-            matched = [cat for cat in self._categories if cat.is_matched(tx)]
+            # Try all categories EXCEPT Ungrouped
+            matched = [cat for cat in self._categories if cat is not ungrouped_cat and cat.is_matched(tx)]
+
             if len(matched) == 0:
-                ungrouped.append(tx)
+                ungrouped_cat.add_transaction(tx)
             elif len(matched) == 1:
                 matched[0].add_transaction(tx)
             else:
                 names = ', '.join(cat.get_name() for cat in matched)
                 raise ValueError(f"Transaction matched multiple categories ({names}): {tx}")
-        return ungrouped
 
+    
     def get_categories(self) -> List[Category]:
         return self._categories
     

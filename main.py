@@ -22,18 +22,18 @@ logger = logging.getLogger(__name__)
 def update_database(db_path: str, db_delimiter: str, report: StringIO, bank: Bank, sender: str) -> None:
     transactions: list[Transaction] = report_to_transactions(report, bank, sender)
 
-    logger.info(f"Number of transactions: {len(transactions)}")
+    logger.info(f"Number of transactions in update: {len(transactions)}")
+
+    transaction_str = lambda g: "\n".join(f"{c.get_name()}:\t{len(c.get_transactions())}" for c in g.get_categories())
 
     grouped = load_grouped_transactions_from_dbase(db_path, db_delimiter)
+    logger.info(f"Transaction groups after load:\n {transaction_str(grouped)}")
 
-    ungrouped = grouped.add_transactions(transactions)
-
-    ungrouped_str = '\n'.join(('\t'.join((t.sender, t.receiver, str(t.date), str(t.amount))) for t in ungrouped))
-    logger.info(f"Number of ungrouped transactions: {len(ungrouped)}")
-    if len(ungrouped) > 0:
-        logger.error(f"List of ungrouped transactions: {ungrouped_str}")
-
+    grouped.add_transactions(transactions)
+    logger.info(f"Transaction groups after update:\n {transaction_str(grouped)}")
+    
     CsvCategoriesSaver().save(grouped=grouped, path=db_path, delimiter=db_delimiter)
+
 
 def update_database_from_file(db_path: str, db_delimiter: str, file_path: str) -> None:
     assert os.path.isfile(file_path)
