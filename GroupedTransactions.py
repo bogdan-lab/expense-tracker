@@ -7,6 +7,7 @@ from Categories import Category
 from ReportParsers import Transaction
 import logging
 from dataclasses import fields
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -148,6 +149,8 @@ class GroupedTransactions:
 
 
 def load_grouped_transactions_from_dbase(db_path: str, delimiter: str) -> GroupedTransactions:
+    if not os.path.exists(db_path):
+        return GroupedTransactions()
     with open(db_path, mode="r", encoding="utf-8") as f:
         return GroupedTransactions.deserialize(f.read(), delimiter=delimiter)
 

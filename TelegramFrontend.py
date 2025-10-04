@@ -27,6 +27,26 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+ALLOWED_USERNAMES = set(
+    u.strip().lower() for u in os.getenv("EXPENSE_TRACKER_ALLOWED_USERS", "").split(",") if u.strip()
+)
+
+
+def guarded(func):
+    
+    async def check_allowed(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user = update.effective_user
+        logger.info(f"Responding to user: {user}")
+        uname = user.first_name.lower()
+        if not uname in ALLOWED_USERNAMES:
+            msg = "Sorry, you are not authorized to use this bot."
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
+            return
+        return await func(update, context)
+    
+    return check_allowed
+
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
         """Hi! Send a transaction report from your bank account (.txt or .csv) and I will update DB with it.
@@ -152,11 +172,11 @@ def main() -> None:
         raise RuntimeError("Missing EXPENSE_TRACKER_TELEGRAM_BOT_TOKEN in environment.")
 
     app = Application.builder().token(token).build()
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("show", report_current_db_statistics))
-    app.add_handler(CommandHandler("last", last_date))
-    app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
-    app.add_handler(CallbackQueryHandler(on_bank_chosen, pattern=r"^bank:"))
+    app.add_handler(CommandHandler("start", guarded(start)))
+    app.add_handler(CommandHandler("show", guarded(report_current_db_statistics)))
+    app.add_handler(CommandHandler("last", guarded(last_date)))
+    app.add_handler(MessageHandler(filters.Document.ALL, guarded(handle_document)))
+    app.add_handler(CallbackQueryHandler(guarded(on_bank_chosen), pattern=r"^bank:"))
 
     logger.info("Bot starting with polling...")
     app.run_polling(close_loop=False)
