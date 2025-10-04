@@ -11,11 +11,13 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
-from typing import Optional
+from typing import Optional, Dict
 from main import plot_current_db_statistics, update_database
+from GroupedTransactions import load_grouped_transactions_from_dbase
 import matplotlib.pyplot as plt
 from Constants import DEFAULT_CSV_DELIMITER, GROUPED_CATEGORIES_CSV_PATH
 from ReportParsers import Bank
+from datetime import date
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -27,7 +29,11 @@ logger = logging.getLogger(__name__)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.message.reply_text(
-        "Hi! Send a UTF-8 text file (.txt or .csv). I'll print its content to my console."
+        """Hi! Send a transaction report from your bank account (.txt or .csv) and I will update DB with it.
+        You can use:
+        - /last to see the date of your last submitted transaction
+        - /show to see stats from transactions in database
+        """
     )
 
 
@@ -112,7 +118,32 @@ async def on_bank_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     update_database(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER, report, bank, sender)
     await report_current_db_statistics(update, context)
        
-    
+
+async def last_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user = update.effective_user
+    sender = (user.first_name or "").lower()
+
+    grouped = load_grouped_transactions_from_dbase(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER)
+
+    latest_by_bank: Dict[Bank, date] = {}
+    for cat in grouped.get_categories():
+        for tx in cat.get_transactions():
+            if tx.sender == sender:
+                b = tx.sender_bank
+                if b not in latest_by_bank or tx.date > latest_by_bank[b]:
+                    latest_by_bank[b] = tx.date
+
+    if not latest_by_bank:
+        await update.message.reply_text("No transactions found for your account.")
+        return
+
+    name_w = max(len(b.value) for b in Bank)
+    date_w = max(len("YYYY-MM-DD"), *(len(d.isoformat()) for d in latest_by_bank.values() if d))
+    lines = [
+        f"{b.value:<{name_w}} : {latest_by_bank[b].isoformat():>{date_w}}"
+        for b in sorted(latest_by_bank)
+    ]
+    await update.message.reply_text("\n".join(lines))   
     
     
 def main() -> None:
@@ -123,6 +154,7 @@ def main() -> None:
     app = Application.builder().token(token).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("show", report_current_db_statistics))
+    app.add_handler(CommandHandler("last", last_date))
     app.add_handler(MessageHandler(filters.Document.ALL, handle_document))
     app.add_handler(CallbackQueryHandler(on_bank_chosen, pattern=r"^bank:"))
 
