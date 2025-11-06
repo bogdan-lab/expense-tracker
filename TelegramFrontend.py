@@ -37,8 +37,7 @@ def guarded(func):
     async def check_allowed(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         logger.info(f"Responding to user: {user}")
-        uname = user.first_name.lower()
-        if not uname in ALLOWED_USERNAMES:
+        if not user.id in ALLOWED_USERNAMES:
             msg = "Sorry, you are not authorized to use this bot."
             await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
             return
