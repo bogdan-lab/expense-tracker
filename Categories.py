@@ -37,6 +37,10 @@ class Category(ABC):
         if is_new_transaction(self._transactions, transaction):
             self._transactions.append(transaction)
             self._total += transaction.amount
+    
+    def add_transactions(self, transactions: List[Transaction]) -> None:
+        for tx in transactions:
+            self.add_transaction(tx)
 
     def get_total(self) -> float:
         return self._total

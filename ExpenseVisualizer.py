@@ -1,10 +1,11 @@
 import matplotlib.pyplot as plt
 from typing import List, Dict
 from collections import defaultdict
-from Categories import Category, FlowDirection
+from Categories import Category, FlowDirection, Ungrouped
 from GroupedTransactions import GroupedTransactions
 import logging
 from matplotlib.figure import Figure
+import copy
 
 
 logger = logging.getLogger(__name__)
@@ -12,11 +13,22 @@ logger = logging.getLogger(__name__)
 
 class ExpenseVisualizer:
     def __init__(self, categories: List[Category]):
-        self.categories = categories
+        self.categories = self._filter_categories(copy.deepcopy(categories))
         self.expense_monthly_data: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
         self.earnings_monthly_data: Dict[str, Dict[str, float]] = defaultdict(lambda: defaultdict(float))
         logger.info("Initializing ExpenseVisualizer and computing monthly totals...")
         self._compute_monthly_totals()
+
+    def _filter_categories(self, categories: List[Category]) -> List[Category]:
+        for cat in categories:
+            if cat.get_name() == "Ungrouped":
+                neg_only = [tx for tx in cat.get_transactions() if tx.amount <= 0]
+                if len(neg_only) < len(cat.get_transactions()):
+                    logger.warning(f"""Found {len(cat.get_transactions() - len(neg_only))} 
+                                   earning ungrouped transactions. Will ignore them when building statistics""")
+                    cat.clear()
+                    cat.add_transactions(neg_only)
+        return categories
 
     def _compute_monthly_totals(self):
         skipped = 0
