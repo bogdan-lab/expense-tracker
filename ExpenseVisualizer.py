@@ -24,8 +24,9 @@ class ExpenseVisualizer:
             if cat.get_name() == "Ungrouped":
                 neg_only = [tx for tx in cat.get_transactions() if tx.amount <= 0]
                 if len(neg_only) < len(cat.get_transactions()):
-                    logger.warning(f"""Found {len(cat.get_transactions() - len(neg_only))} 
-                                   earning ungrouped transactions. Will ignore them when building statistics""")
+                    logger.warning(f"Found {len(cat.get_transactions()) - len(neg_only)}"
+                                   " earning ungrouped transactions. "
+                                   "Will ignore them when building statistics")
                     cat.clear()
                     cat.add_transactions(neg_only)
         return categories
