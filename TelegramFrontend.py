@@ -56,12 +56,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-def _is_supported_text_file(file_name: str, mime: Optional[str]) -> bool:
-    name_ok = file_name.lower().endswith((".txt", ".csv"))
-    mime_ok = bool(mime) and mime.startswith("text/")
-    return name_ok and mime_ok
-
-
 async def report_current_db_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     img_buf = BytesIO()
     fig = plot_current_db_statistics(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER)
@@ -89,12 +83,6 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         return
 
     doc = update.message.document
-
-    if not _is_supported_text_file(doc.file_name or "", doc.mime_type):
-        await update.message.reply_text(
-            "Unsupported file. Please send a UTF-8 text file with extension .txt or .csv."
-        )
-        return
 
     tg_file = await doc.get_file()
     raw_bytes = await tg_file.download_as_bytearray()
@@ -134,7 +122,12 @@ async def on_bank_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     logger.info(f"Sender: {sender}")
     
-    update_database(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER, report, bank, sender)
+    try:
+        update_database(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER, report, bank, sender)
+    except Exception as e:
+        logger.error(f"{type(e)}: {e}")
+        await query.message.reply_text(f"Cannot process the last report. {e}")
+        return
     await report_current_db_statistics(update, context)
        
 
