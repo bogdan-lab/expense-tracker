@@ -61,7 +61,6 @@ class GroupedTransactions:
                 names = ', '.join(cat.get_name() for cat in matched)
                 raise ValueError(f"Transaction matched multiple categories ({names}): {tx}")
 
-    
     def get_categories(self) -> List[Category]:
         return self._categories
     

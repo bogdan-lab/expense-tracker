@@ -49,6 +49,8 @@ def plot_current_db_statistics(db_path: str, db_delimiter: str) -> Figure:
 def validate_database_stays_the_same(db_path: str, db_delimiter: str) -> None:
     current = load_grouped_transactions_from_dbase(db_path, db_delimiter)
     logger.info(f"Transaction groups after load:\n{current.format_category_counts()}")
+    current.get_category(Ungrouped).clear()
+    logger.info(f"Dropping ungrouped transactions:\n{current.format_category_counts()}")
     
     all_trs = []
     for c in current.get_categories():
