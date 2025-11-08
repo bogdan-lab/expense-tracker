@@ -10,6 +10,7 @@ from Constants import DEFAULT_CSV_DELIMITER, GROUPED_CATEGORIES_CSV_PATH
 from io import StringIO
 import os
 from matplotlib.figure import Figure
+import copy
 
 
 logging.basicConfig(
@@ -69,14 +70,30 @@ def process_ungrouped_transactions(db_path: str, db_delimiter: str) -> None:
     current = load_grouped_transactions_from_dbase(db_path, db_delimiter)
     logger.info(f"Transaction groups after load:\n{current.format_category_counts()}")
     
-    ungrouped_trs = current.get_category(Ungrouped).get_transactions()
-    logger.info(f"Number of ungrouped transactions {len(ungrouped_trs)}")
+    ungrouped_trs = copy.deepcopy(current.get_category(Ungrouped).get_transactions())
+    logger.info(f"Number of ungrouped transactions before {len(ungrouped_trs)}")
     current.get_category(Ungrouped).clear()
     
     current.add_transactions(ungrouped_trs)
-    logger.info(f"Number of ungrouped transactions {len(current.get_category(Ungrouped).get_transactions())}")
+    logger.info(f"Number of ungrouped transactions after {len(current.get_category(Ungrouped).get_transactions())}")
     
     CsvCategoriesSaver().save(grouped=current, path=db_path, delimiter=db_delimiter)
+
+
+def rewrite_groupings(db_path: str, db_delimiter: str) -> None:
+    current = load_grouped_transactions_from_dbase(db_path, db_delimiter)
+    logger.info(f"Transaction groups after load:\n{current.format_category_counts()}")
+
+    all_trs: list[Transaction] = []
+    for c in current.get_categories():
+        all_trs.extend(c.get_transactions())
+    logger.info(f"Total transactions to re-match: {len(all_trs)}")
+
+    new_grouped = GroupedTransactions()
+    new_grouped.add_transactions(all_trs)
+    logger.info(f"Transaction groups after full rematch:\n{new_grouped.format_category_counts()}")
+
+    CsvCategoriesSaver().save(grouped=new_grouped, path=db_path, delimiter=db_delimiter)
 
 
 def main():
@@ -85,6 +102,7 @@ def main():
     mx.add_argument("--validate-db", action="store_true", help="Validate DB stays the same after rematching.")
     mx.add_argument("--process-ungrouped", action="store_true", help="Try to rematch currently ungrouped transactions.")
     mx.add_argument("--show-stats", action="store_true", help="Show current statistics without updating the DB.")
+    mx.add_argument("--rewrite-groupings", action="store_true", help="Rewrite entire table with new groupings.")
     parser.add_argument("--path", type=str, help="Path to the transaction file(s)", required=False)
     args = parser.parse_args()
 
@@ -99,6 +117,10 @@ def main():
     if args.show_stats:
         plot_current_db_statistics(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER)
         plt.show()
+        return
+
+    if args.rewrite_groupings:
+        rewrite_groupings(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER)
         return
 
     if not args.path:

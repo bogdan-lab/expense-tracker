@@ -164,4 +164,4 @@ def compare_categories(actual: GroupedTransactions, expected: GroupedTransaction
         e_tx = e_cat.get_transactions()
         a_tx = a_cat.get_transactions()
         if e_tx != a_tx:
-            return f"Transaction mismatch in category '{e_tx}' != '{a_tx}'"
+            return f"Transaction mismatch in category {e_cat.get_name()}\n '{e_tx}' != '{a_tx}'"
