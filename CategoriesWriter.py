@@ -6,6 +6,7 @@ from GroupedTransactions import GroupedTransactions
 
 logger = logging.getLogger(__name__)
 
+
 class CategoriesSaver(ABC):
     @abstractmethod
     def save(self, grouped: GroupedTransactions, path: str) -> None:
@@ -23,4 +24,3 @@ class CsvCategoriesSaver(CategoriesSaver):
         with open(path, mode="w", encoding="utf-8") as f:
             f.write(csv_text)
         logger.info(f"Wrote grouped transactions to {path}")
-

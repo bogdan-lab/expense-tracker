@@ -6,22 +6,32 @@ from typing import List, Tuple, Union
 from enum import Enum
 from TransactionTransformers import is_new_transaction
 
+
 class FlowDirection(Enum):
     EARNINGS = "earnings"
     EXPENSES = "expenses"
     NEUTRAL = "neutral"
 
-def match_receiver_and_date(pattern: re.Pattern, match_date:Union[date, Tuple[date]], transaction: Transaction)-> bool:
-    result = pattern.search(transaction.receiver) 
+
+def match_receiver_and_date(
+    pattern: re.Pattern, match_date: Union[date, Tuple[date]], transaction: Transaction
+) -> bool:
+    result = pattern.search(transaction.receiver)
     if match_date is None:
         return result
     if isinstance(match_date, tuple):
         assert len(match_date) == 2
-        return result and transaction.date >= match_date[0] and transaction.date <= match_date[1]
+        return (
+            result
+            and transaction.date >= match_date[0]
+            and transaction.date <= match_date[1]
+        )
     elif isinstance(match_date, date):
         return result and transaction.date == match_date
     else:
-        raise ValueError(f"Unexpected type of match_date {match_date}, {type(match_date)}")
+        raise ValueError(
+            f"Unexpected type of match_date {match_date}, {type(match_date)}"
+        )
 
 
 class Category(ABC):
@@ -37,7 +47,7 @@ class Category(ABC):
         if is_new_transaction(self._transactions, transaction):
             self._transactions.append(transaction)
             self._total += transaction.amount
-    
+
     def add_transactions(self, transactions: List[Transaction]) -> None:
         for tx in transactions:
             self.add_transaction(tx)
@@ -56,7 +66,7 @@ class Category(ABC):
     @abstractmethod
     def is_matched(self, transaction: Transaction) -> bool:
         pass
-    
+
     @abstractmethod
     def get_flow_direction(self) -> FlowDirection:
         pass
@@ -64,7 +74,7 @@ class Category(ABC):
 
 class Groceries(Category):
     def __init__(self):
-        super().__init__('Groceries')
+        super().__init__("Groceries")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -76,7 +86,7 @@ class Groceries(Category):
             re.compile(r"^factor\s"),
             re.compile(r"^lidl\b", re.IGNORECASE),
             re.compile(r"^marqt\b", re.IGNORECASE),
-            re.compile(r"\brewe(?:\s*to\s*go)?\b", re.IGNORECASE),              
+            re.compile(r"\brewe(?:\s*to\s*go)?\b", re.IGNORECASE),
             re.compile(r"^condis\b", re.IGNORECASE),
             re.compile(r"^g20\s+supermarch(?:é|e)s?\b", re.IGNORECASE),
             re.compile(r"\bla\s+grande\s+[eé]picerie\b", re.IGNORECASE),
@@ -85,23 +95,23 @@ class Groceries(Category):
             re.compile(r"^coles\b", re.IGNORECASE),
             re.compile(r"^woolworths\b", re.IGNORECASE),
             re.compile(r"^ullrich\b", re.IGNORECASE),
-            re.compile(r"^areas paris nor$", re.IGNORECASE), 
-            re.compile(r"^schoko shop$", re.IGNORECASE), 
-            re.compile(r"^tgtg\s+[a-z0-9]+$", re.IGNORECASE), 
-            re.compile(r"^theo automaten$", re.IGNORECASE), 
-            re.compile(r"\bvb den haag\b", re.IGNORECASE), 
-            re.compile(r"^chocoladefabriken lind", re.IGNORECASE), 
-            re.compile(r"^f\.h\.w\. gastronomie gmb$", re.IGNORECASE)
+            re.compile(r"^areas paris nor$", re.IGNORECASE),
+            re.compile(r"^schoko shop$", re.IGNORECASE),
+            re.compile(r"^tgtg\s+[a-z0-9]+$", re.IGNORECASE),
+            re.compile(r"^theo automaten$", re.IGNORECASE),
+            re.compile(r"\bvb den haag\b", re.IGNORECASE),
+            re.compile(r"^chocoladefabriken lind", re.IGNORECASE),
+            re.compile(r"^f\.h\.w\. gastronomie gmb$", re.IGNORECASE),
         ]
         return any(p.search(transaction.receiver) for p in patterns)
-    
+
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
 
 class Transport(Category):
     def __init__(self):
-        super().__init__('Transport')
+        super().__init__("Transport")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -131,9 +141,10 @@ class Transport(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Insurance(Category):
     def __init__(self):
-        super().__init__('Insurance')
+        super().__init__("Insurance")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -146,9 +157,10 @@ class Insurance(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class HouseholdGoods(Category):
     def __init__(self):
-        super().__init__('Household goods')
+        super().__init__("Household goods")
 
     def is_matched(self, transaction: Transaction) -> bool:
         match_args = [
@@ -171,11 +183,11 @@ class HouseholdGoods(Category):
             (re.compile(r"^temu\.com$", re.IGNORECASE), None),
             (re.compile(r"^marktplaats\b", re.IGNORECASE), None),
             (re.compile(r"^het sleutelhuis design$", re.IGNORECASE), None),
-            (re.compile(r"\bpaagman\b", re.IGNORECASE), None), 
-            (re.compile(r"^lib\. abbesses$", re.IGNORECASE), None), 
-            (re.compile(r"\bhering sanikonzept\b", re.IGNORECASE), None), 
-            (re.compile(r"^prins-vermolen vof$", re.IGNORECASE), None), 
-            (re.compile(r"^aircotech klimaattechniek", re.IGNORECASE), None), 
+            (re.compile(r"\bpaagman\b", re.IGNORECASE), None),
+            (re.compile(r"^lib\. abbesses$", re.IGNORECASE), None),
+            (re.compile(r"\bhering sanikonzept\b", re.IGNORECASE), None),
+            (re.compile(r"^prins-vermolen vof$", re.IGNORECASE), None),
+            (re.compile(r"^aircotech klimaattechniek", re.IGNORECASE), None),
             (re.compile(r"^downtown souvenirs$", re.IGNORECASE), None),
         ]
         return any(match_receiver_and_date(p, d, transaction) for p, d in match_args)
@@ -183,9 +195,10 @@ class HouseholdGoods(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Restaurants(Category):
     def __init__(self):
-        super().__init__('Restaurants')
+        super().__init__("Restaurants")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -240,23 +253,23 @@ class Restaurants(Category):
             re.compile(r"\bpadre coffee\b", re.IGNORECASE),
             re.compile(r"\bwakuli\b", re.IGNORECASE),
             re.compile(r"\bthe blue lagoon\b", re.IGNORECASE),
-            re.compile(r"^dépôt légal$", re.IGNORECASE), 
-            re.compile(r"^die espressonisten$", re.IGNORECASE), 
-            re.compile(r"^hmshost international$", re.IGNORECASE), 
-            re.compile(r"^in\.gredienti$", re.IGNORECASE), 
-            re.compile(r"^le 17 45$", re.IGNORECASE), 
-            re.compile(r"^le pain retrouvé$", re.IGNORECASE), 
-            re.compile(r"^le recrutement$", re.IGNORECASE), 
-            re.compile(r"^luca kin-za alexanderp$", re.IGNORECASE), 
-            re.compile(r"^mambo beach exploitati", re.IGNORECASE), 
-            re.compile(r"^manta beach$", re.IGNORECASE), 
-            re.compile(r"^maximilians$", re.IGNORECASE), 
-            re.compile(r"^mcstrandweg$", re.IGNORECASE), 
-            re.compile(r"^sonya\b.*takeaway\.com$", re.IGNORECASE), 
-            re.compile(r"\bal teatro\b", re.IGNORECASE), 
-            re.compile(r"^dudok\b", re.IGNORECASE), 
-            re.compile(r"^miss maui beach house$", re.IGNORECASE), 
-            re.compile(r"\bfauve cofee\b", re.IGNORECASE), 
+            re.compile(r"^dépôt légal$", re.IGNORECASE),
+            re.compile(r"^die espressonisten$", re.IGNORECASE),
+            re.compile(r"^hmshost international$", re.IGNORECASE),
+            re.compile(r"^in\.gredienti$", re.IGNORECASE),
+            re.compile(r"^le 17 45$", re.IGNORECASE),
+            re.compile(r"^le pain retrouvé$", re.IGNORECASE),
+            re.compile(r"^le recrutement$", re.IGNORECASE),
+            re.compile(r"^luca kin-za alexanderp$", re.IGNORECASE),
+            re.compile(r"^mambo beach exploitati", re.IGNORECASE),
+            re.compile(r"^manta beach$", re.IGNORECASE),
+            re.compile(r"^maximilians$", re.IGNORECASE),
+            re.compile(r"^mcstrandweg$", re.IGNORECASE),
+            re.compile(r"^sonya\b.*takeaway\.com$", re.IGNORECASE),
+            re.compile(r"\bal teatro\b", re.IGNORECASE),
+            re.compile(r"^dudok\b", re.IGNORECASE),
+            re.compile(r"^miss maui beach house$", re.IGNORECASE),
+            re.compile(r"\bfauve cofee\b", re.IGNORECASE),
             re.compile(r"^bavaria berlin$", re.IGNORECASE),
             re.compile(r"^coffeecom\.\s*-\s*albron$", re.IGNORECASE),
         ]
@@ -265,9 +278,10 @@ class Restaurants(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Gina(Category):
     def __init__(self):
-        super().__init__('Gina')
+        super().__init__("Gina")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -282,15 +296,16 @@ class Gina(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Health(Category):
     def __init__(self):
-        super().__init__('Health')
+        super().__init__("Health")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
             re.compile(r"^etos\s+[a-z0-9\.]+", re.IGNORECASE),
-            re.compile(r"^holland\s*(?:&\s*)?barrett$", re.IGNORECASE),   
-            re.compile(r"^ondalinda$", re.IGNORECASE),                    # SEKTA
+            re.compile(r"^holland\s*(?:&\s*)?barrett$", re.IGNORECASE),
+            re.compile(r"^ondalinda$", re.IGNORECASE),  # SEKTA
             re.compile(r"^newpharma\s", re.IGNORECASE),
             re.compile(r"^dap bezuidenhout\s", re.IGNORECASE),
             re.compile(r"^coderscourse\.com$", re.IGNORECASE),
@@ -304,11 +319,11 @@ class Health(Category):
             re.compile(r"^rossmann\b", re.IGNORECASE),
             re.compile(r"medical training", re.IGNORECASE),
             re.compile(r"^amilda wellness boutiq", re.IGNORECASE),
-            re.compile(r"\bggd\b", re.IGNORECASE), 
-            re.compile(r"^dap bezuidenhout\b", re.IGNORECASE), 
-            re.compile(r"^firma dr prad$", re.IGNORECASE), 
-            re.compile(r"^mecca retail gle$", re.IGNORECASE), 
-            re.compile(r"^plein\.nl\b", re.IGNORECASE), 
+            re.compile(r"\bggd\b", re.IGNORECASE),
+            re.compile(r"^dap bezuidenhout\b", re.IGNORECASE),
+            re.compile(r"^firma dr prad$", re.IGNORECASE),
+            re.compile(r"^mecca retail gle$", re.IGNORECASE),
+            re.compile(r"^plein\.nl\b", re.IGNORECASE),
             re.compile(r"^coders course$", re.IGNORECASE),
         ]
         return any(p.search(transaction.receiver) for p in patterns)
@@ -316,9 +331,10 @@ class Health(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Clothes(Category):
     def __init__(self):
-        super().__init__('Clothes')
+        super().__init__("Clothes")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -342,9 +358,10 @@ class Clothes(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Child(Category):
     def __init__(self):
-        super().__init__('Child')
+        super().__init__("Child")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -362,8 +379,8 @@ class Child(Category):
             re.compile(r"kids eyewear", re.IGNORECASE),
             re.compile(r"^solid starts$", re.IGNORECASE),
             re.compile(r"^mnogoknigde$", re.IGNORECASE),
-            re.compile(r"\bthe american book\b", re.IGNORECASE), 
-            re.compile(r"^sociale verzekeringsbank$", re.IGNORECASE), 
+            re.compile(r"\bthe american book\b", re.IGNORECASE),
+            re.compile(r"^sociale verzekeringsbank$", re.IGNORECASE),
             re.compile(r"^transfer to booktell limited$", re.IGNORECASE),
         ]
         return any(p.search(transaction.receiver) for p in patterns)
@@ -371,14 +388,15 @@ class Child(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Entertainment(Category):
     def __init__(self):
-        super().__init__('Entertainment')
+        super().__init__("Entertainment")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"^llc karta travel$", re.IGNORECASE), 
-            re.compile(r"^sagrada família$", re.IGNORECASE), 
+            re.compile(r"^llc karta travel$", re.IGNORECASE),
+            re.compile(r"^sagrada família$", re.IGNORECASE),
             re.compile(r"^the upside down\b", re.IGNORECASE),
         ]
         return any(p.search(transaction.receiver) for p in patterns)
@@ -386,17 +404,18 @@ class Entertainment(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Hotels(Category):
     def __init__(self):
-        super().__init__('Hotels')
+        super().__init__("Hotels")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"^residence inn the hagu", re.IGNORECASE), 
+            re.compile(r"^residence inn the hagu", re.IGNORECASE),
             re.compile(r"\bbooking\b", re.IGNORECASE),
-            re.compile(r"^g m s i$", re.IGNORECASE), 
-            re.compile(r"^hotel\b", re.IGNORECASE), 
-            re.compile(r"^ibis$", re.IGNORECASE), 
+            re.compile(r"^g m s i$", re.IGNORECASE),
+            re.compile(r"^hotel\b", re.IGNORECASE),
+            re.compile(r"^ibis$", re.IGNORECASE),
             re.compile(r"\bbabylonhoteldenha$", re.IGNORECASE),
         ]
         return any(p.search(transaction.receiver) for p in patterns)
@@ -404,13 +423,14 @@ class Hotels(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Taxes(Category):
     def __init__(self):
-        super().__init__('Taxes')
+        super().__init__("Taxes")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
-            re.compile(r"^immigratie en naturalisatie dienst$"), 
+            re.compile(r"^immigratie en naturalisatie dienst$"),
             re.compile(r"^gemeente\s"),
             re.compile(r"belasting"),
             re.compile(r"\bgem(?:eente)?\s*den haag\b", re.IGNORECASE),
@@ -420,9 +440,10 @@ class Taxes(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Documents(Category):
     def __init__(self):
-        super().__init__('Documents')
+        super().__init__("Documents")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -438,9 +459,10 @@ class Documents(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class VVE(Category):
     def __init__(self):
-        super().__init__('VVE')
+        super().__init__("VVE")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -452,9 +474,10 @@ class VVE(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Bills(Category):
     def __init__(self):
-        super().__init__('Bills')
+        super().__init__("Bills")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -469,9 +492,10 @@ class Bills(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Banks(Category):
     def __init__(self):
-        super().__init__('Banks')
+        super().__init__("Banks")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -484,9 +508,10 @@ class Banks(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class InternalTransfers(Category):
     def __init__(self):
-        super().__init__('InternalTransfers')
+        super().__init__("InternalTransfers")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -499,8 +524,8 @@ class InternalTransfers(Category):
             re.compile(r"^revolut.*3740.*$"),
             re.compile(r"^revolut bank uab$"),
             re.compile(r"^oranje spaarrekening$"),
-            re.compile(r"^ideal top-up$"), # TODO amount should be positive to match
-            re.compile(r"^apple pay top-up\s"), # TODO amount should be positive
+            re.compile(r"^ideal top-up$"),  # TODO amount should be positive to match
+            re.compile(r"^apple pay top-up\s"),  # TODO amount should be positive
             re.compile(r"^moonpay$"),
             re.compile(r"^interactive brokers ireland limited$"),
             re.compile(r"^a lakatosh$"),
@@ -513,9 +538,10 @@ class InternalTransfers(Category):
     def get_flow_direction(self):
         return FlowDirection.NEUTRAL
 
+
 class Apartment(Category):
     def __init__(self):
-        super().__init__('Apartment')
+        super().__init__("Apartment")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -527,9 +553,10 @@ class Apartment(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Income(Category):
     def __init__(self):
-        super().__init__('Income')
+        super().__init__("Income")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -540,9 +567,10 @@ class Income(Category):
     def get_flow_direction(self):
         return FlowDirection.EARNINGS
 
+
 class Services(Category):
     def __init__(self):
-        super().__init__('Services')
+        super().__init__("Services")
 
     def is_matched(self, transaction: Transaction) -> bool:
         patterns = [
@@ -556,7 +584,7 @@ class Services(Category):
             re.compile(r"^google one$"),
             re.compile(r"^audible$"),
             re.compile(r"^youtube$"),
-            re.compile(r"^buy me a coffee$", re.IGNORECASE), 
+            re.compile(r"^buy me a coffee$", re.IGNORECASE),
             re.compile(r"^hetzner\b", re.IGNORECASE),
             re.compile(r"^squarespace$", re.IGNORECASE),
             re.compile(r"^notion$", re.IGNORECASE),
@@ -566,76 +594,83 @@ class Services(Category):
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Others(Category):
     def __init__(self):
-        super().__init__('Others')
+        super().__init__("Others")
 
     def is_matched(self, transaction: Transaction) -> bool:
-        
+
         match_args = [
             (re.compile(r"^(ccv\*)?kroonenberg groep$"), None),
             # Trip to Prague
             (re.compile(r"^albert$"), (date(2025, 3, 8), date(2025, 3, 9))),
-            (re.compile(r"^infobus\.eu$"), None),   # tickets for my parents
-            # End of Prague trip 
-            (re.compile(r"^tunity$"), None),    # haircut
-            (re.compile(r"^transfer to revolut user$"), (date(2025,4,11), date(2025, 4,14))),
-            (re.compile(r"^shared packaging$"), (date(2025,1,15), date(2025,1,27))),
-            (re.compile(r"^postnl holding b.v.$"), date(2025,2,12)),
-            (re.compile(r"^parfenchikova via tikkie$"), date(2025,4,19)),
-            (re.compile(r"^aab inz tikkie$"), date(2025,4,30)),
-            (re.compile(r"^eye wish opticiens$"), date(2025,3,8)),
-            (re.compile(r"^maghnouji via tikkie$"), date(2025,3,21)),
+            (re.compile(r"^infobus\.eu$"), None),  # tickets for my parents
+            # End of Prague trip
+            (re.compile(r"^tunity$"), None),  # haircut
+            (
+                re.compile(r"^transfer to revolut user$"),
+                (date(2025, 4, 11), date(2025, 4, 14)),
+            ),
+            (re.compile(r"^shared packaging$"), (date(2025, 1, 15), date(2025, 1, 27))),
+            (re.compile(r"^postnl holding b.v.$"), date(2025, 2, 12)),
+            (re.compile(r"^parfenchikova via tikkie$"), date(2025, 4, 19)),
+            (re.compile(r"^aab inz tikkie$"), date(2025, 4, 30)),
+            (re.compile(r"^eye wish opticiens$"), date(2025, 3, 8)),
+            (re.compile(r"^maghnouji via tikkie$"), date(2025, 3, 21)),
             (re.compile(r"^amsterdam (?:cs|zuid)\b", re.IGNORECASE), None),
             (re.compile(r"^den haag cs\b", re.IGNORECASE), None),
-            (re.compile(r"^to petr petrov$"), date(2025,3,17)),
-            (re.compile(r"^swift transfer$"), date(2025,4,28)),
-            (re.compile(r"^dopravní podnik hlavního města prahy"), date(2025,3,7)),
-            (re.compile(r"^monastery garden$"), date(2025,3,7)),
-            (re.compile(r"^u červeného páva$"), date(2025,3,7)),
-            (re.compile(r"^bubbletee$"), date(2025,3,8)),
-            (re.compile(r"^praha lodě$"), date(2025,3,8)),
-            (re.compile(r"^trdelnik shop$"), date(2025,3,7)),
-            (re.compile(r"^the cozy asian kitche$"), date(2025,3,9)),
-            (re.compile(r"^restaurace malostranská beseda$"), date(2025,3,8)),
-            (re.compile(r"^pražský hrad$"), date(2025,3,9)),
-            (re.compile(r"^stolk via tikkie$"), date(2025,2,7)),
-            (re.compile(r"^aab inz tikkie$", re.IGNORECASE), None), 
-            (re.compile(r"\bset sgt b\.v\.", re.IGNORECASE), None), 
-            (re.compile(r"\bsiepelinga b\.v\.", re.IGNORECASE), None), 
-            (re.compile(r"^leonie$", re.IGNORECASE), None), 
-            (re.compile(r"^ls bronte belo$", re.IGNORECASE), None), 
-            (re.compile(r"^mw ta lebedeva\b", re.IGNORECASE), None), 
-            (re.compile(r"^orovera$", re.IGNORECASE), None), 
-            (re.compile(r"^pepi rer sia\b", re.IGNORECASE), None), 
-            (re.compile(r"^postshop-tabak-lotto$", re.IGNORECASE), None), 
-            (re.compile(r"^schmitz\s*&\s*nittenwilm\b", re.IGNORECASE), None), 
-            (re.compile(r"^selman ozdemir$", re.IGNORECASE), None), 
-            (re.compile(r"^shop_udl$", re.IGNORECASE), None), 
-            (re.compile(r"^sverige$", re.IGNORECASE), None), 
-            (re.compile(r"\bhaumann gmbh\b", re.IGNORECASE), None), 
-            (re.compile(r"^doekhi\b", re.IGNORECASE), None), 
-            (re.compile(r"^hr sv babkin$", re.IGNORECASE), None), 
-            (re.compile(r"^toilet\b", re.IGNORECASE), None), 
-            (re.compile(r"^to petr petrov$", re.IGNORECASE), None), 
-            (re.compile(r"^transfer to anastasiia karazeeva$", re.IGNORECASE), None), 
-            (re.compile(r"^transfer to pavel dvurechenskii$", re.IGNORECASE), None), 
-            (re.compile(r"^transfer to revolut user$", re.IGNORECASE), None), 
-            (re.compile(r"^transfer to rinat mukhametianov$", re.IGNORECASE), None), 
-            (re.compile(r"^velicico\b", re.IGNORECASE), None), 
+            (re.compile(r"^to petr petrov$"), date(2025, 3, 17)),
+            (re.compile(r"^swift transfer$"), date(2025, 4, 28)),
+            (re.compile(r"^dopravní podnik hlavního města prahy"), date(2025, 3, 7)),
+            (re.compile(r"^monastery garden$"), date(2025, 3, 7)),
+            (re.compile(r"^u červeného páva$"), date(2025, 3, 7)),
+            (re.compile(r"^bubbletee$"), date(2025, 3, 8)),
+            (re.compile(r"^praha lodě$"), date(2025, 3, 8)),
+            (re.compile(r"^trdelnik shop$"), date(2025, 3, 7)),
+            (re.compile(r"^the cozy asian kitche$"), date(2025, 3, 9)),
+            (re.compile(r"^restaurace malostranská beseda$"), date(2025, 3, 8)),
+            (re.compile(r"^pražský hrad$"), date(2025, 3, 9)),
+            (re.compile(r"^stolk via tikkie$"), date(2025, 2, 7)),
+            (re.compile(r"^aab inz tikkie$", re.IGNORECASE), None),
+            (re.compile(r"\bset sgt b\.v\.", re.IGNORECASE), None),
+            (re.compile(r"\bsiepelinga b\.v\.", re.IGNORECASE), None),
+            (re.compile(r"^leonie$", re.IGNORECASE), None),
+            (re.compile(r"^ls bronte belo$", re.IGNORECASE), None),
+            (re.compile(r"^mw ta lebedeva\b", re.IGNORECASE), None),
+            (re.compile(r"^orovera$", re.IGNORECASE), None),
+            (re.compile(r"^pepi rer sia\b", re.IGNORECASE), None),
+            (re.compile(r"^postshop-tabak-lotto$", re.IGNORECASE), None),
+            (re.compile(r"^schmitz\s*&\s*nittenwilm\b", re.IGNORECASE), None),
+            (re.compile(r"^selman ozdemir$", re.IGNORECASE), None),
+            (re.compile(r"^shop_udl$", re.IGNORECASE), None),
+            (re.compile(r"^sverige$", re.IGNORECASE), None),
+            (re.compile(r"\bhaumann gmbh\b", re.IGNORECASE), None),
+            (re.compile(r"^doekhi\b", re.IGNORECASE), None),
+            (re.compile(r"^hr sv babkin$", re.IGNORECASE), None),
+            (re.compile(r"^toilet\b", re.IGNORECASE), None),
+            (re.compile(r"^to petr petrov$", re.IGNORECASE), None),
+            (re.compile(r"^transfer to anastasiia karazeeva$", re.IGNORECASE), None),
+            (re.compile(r"^transfer to pavel dvurechenskii$", re.IGNORECASE), None),
+            (re.compile(r"^transfer to revolut user$", re.IGNORECASE), None),
+            (re.compile(r"^transfer to rinat mukhametianov$", re.IGNORECASE), None),
+            (re.compile(r"^velicico\b", re.IGNORECASE), None),
             (re.compile(r"^герц$", re.IGNORECASE), None),
         ]
-        return any(match_receiver_and_date(p, d, transaction) for p, d in match_args) 
+        return any(match_receiver_and_date(p, d, transaction) for p, d in match_args)
 
     def get_flow_direction(self):
         return FlowDirection.EXPENSES
 
+
 class Ungrouped(Category):
     def __init__(self):
-        super().__init__('Ungrouped')
+        super().__init__("Ungrouped")
 
     def is_matched(self, transaction: Transaction) -> bool:
-        raise RuntimeError("Ungrouped should not be matched via is_matched; add transactions explicitly.")
+        raise RuntimeError(
+            "Ungrouped should not be matched via is_matched; add transactions explicitly."
+        )
 
     def get_flow_direction(self) -> FlowDirection:
         return FlowDirection.EXPENSES

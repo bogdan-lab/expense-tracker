@@ -28,12 +28,14 @@ logger = logging.getLogger(__name__)
 
 
 ALLOWED_USERNAMES = set(
-    u.strip().lower() for u in os.getenv("EXPENSE_TRACKER_ALLOWED_USERS", "").split(",") if u.strip()
+    u.strip().lower()
+    for u in os.getenv("EXPENSE_TRACKER_ALLOWED_USERS", "").split(",")
+    if u.strip()
 )
 
 
 def guarded(func):
-    
+
     async def check_allowed(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         logger.info(f"Responding to user: {user}")
@@ -42,7 +44,7 @@ def guarded(func):
             await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
             return
         return await func(update, context)
-    
+
     return check_allowed
 
 
@@ -56,27 +58,33 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     )
 
 
-async def report_current_db_statistics(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def report_current_db_statistics(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
     img_buf = BytesIO()
     fig = plot_current_db_statistics(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER)
     fig.savefig(img_buf, format="png")
     plt.close(fig)
     img_buf.seek(0)
-    
-    await context.bot.send_photo(
-    chat_id=update.effective_chat.id,
-    photo=img_buf)
-    
+
+    await context.bot.send_photo(chat_id=update.effective_chat.id, photo=img_buf)
+
+
 def _bank_keyboard() -> InlineKeyboardMarkup:
     prefix = lambda x: "bank:" + x
     buttons = [
         [
-            InlineKeyboardButton(text="ABN AMRO", callback_data=prefix(Bank.ABN_AMRO.value)),
+            InlineKeyboardButton(
+                text="ABN AMRO", callback_data=prefix(Bank.ABN_AMRO.value)
+            ),
             InlineKeyboardButton(text="ING", callback_data=prefix(Bank.ING.value)),
-            InlineKeyboardButton(text="Revolut", callback_data=prefix(Bank.REVOLUT.value)),
+            InlineKeyboardButton(
+                text="Revolut", callback_data=prefix(Bank.REVOLUT.value)
+            ),
         ]
     ]
     return InlineKeyboardMarkup(buttons)
+
 
 async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not update.message or not update.message.document:
@@ -89,13 +97,17 @@ async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     try:
         report = StringIO(raw_bytes.decode("utf-8", errors="strict"))
     except UnicodeDecodeError:
-        await update.message.reply_text("Encoding error. Please send the file encoded as UTF-8.")
+        await update.message.reply_text(
+            "Encoding error. Please send the file encoded as UTF-8."
+        )
         return
 
     context.user_data["pending_report"] = report
-    await update.message.reply_text("Which bank is this statement from?", reply_markup=_bank_keyboard())
-    
-    
+    await update.message.reply_text(
+        "Which bank is this statement from?", reply_markup=_bank_keyboard()
+    )
+
+
 async def on_bank_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     query = update.callback_query
     if not query or not query.data or not query.data.startswith("bank:"):
@@ -115,27 +127,33 @@ async def on_bank_chosen(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     report = context.user_data.pop("pending_report", None)
     if report is None:
-        await query.message.reply_text("No pending file found. Please resend the document.")
+        await query.message.reply_text(
+            "No pending file found. Please resend the document."
+        )
         return
-    
+
     sender = str(update.effective_user.first_name)
 
     logger.info(f"Sender: {sender}")
-    
+
     try:
-        update_database(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER, report, bank, sender)
+        update_database(
+            GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER, report, bank, sender
+        )
     except Exception as e:
         logger.error(f"{type(e)}: {e}")
         await query.message.reply_text(f"Cannot process the last report. {e}")
         return
     await report_current_db_statistics(update, context)
-       
+
 
 async def last_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user = update.effective_user
     sender = (user.first_name or "").lower()
 
-    grouped = load_grouped_transactions_from_dbase(GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER)
+    grouped = load_grouped_transactions_from_dbase(
+        GROUPED_CATEGORIES_CSV_PATH, DEFAULT_CSV_DELIMITER
+    )
 
     latest_by_bank: Dict[Bank, date] = {}
     for cat in grouped.get_categories():
@@ -150,14 +168,16 @@ async def last_date(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         return
 
     name_w = max(len(b.value) for b in Bank)
-    date_w = max(len("YYYY-MM-DD"), *(len(d.isoformat()) for d in latest_by_bank.values() if d))
+    date_w = max(
+        len("YYYY-MM-DD"), *(len(d.isoformat()) for d in latest_by_bank.values() if d)
+    )
     lines = [
         f"{b.value:<{name_w}} : {latest_by_bank[b].isoformat():>{date_w}}"
         for b in sorted(latest_by_bank)
     ]
-    await update.message.reply_text("\n".join(lines))   
-    
-    
+    await update.message.reply_text("\n".join(lines))
+
+
 def main() -> None:
     token = os.environ.get("EXPENSE_TRACKER_TELEGRAM_BOT_TOKEN")
     if not token:

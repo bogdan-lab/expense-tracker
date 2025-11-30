@@ -1,3 +1,2 @@
-
 GROUPED_CATEGORIES_CSV_PATH = "grouped_categories.csv"
 DEFAULT_CSV_DELIMITER = "|"
