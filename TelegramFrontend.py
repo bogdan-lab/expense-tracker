@@ -26,8 +26,7 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-
-ALLOWED_USERNAMES = set(
+ALLOWED_USER_IDS = set(
     u.strip().lower()
     for u in os.getenv("EXPENSE_TRACKER_ALLOWED_USERS", "").split(",")
     if u.strip()
@@ -39,7 +38,7 @@ def guarded(func):
     async def check_allowed(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         logger.info(f"Responding to user: {user}")
-        if not user.id in ALLOWED_USERNAMES:
+        if not str(user.id) in ALLOWED_USER_IDS:
             msg = "Sorry, you are not authorized to use this bot."
             await context.bot.send_message(chat_id=update.effective_chat.id, text=msg)
             return
